@@ -2,7 +2,7 @@ ApplyRSFYuanEtAl <- function(trainingTestStructure){
     #-------------------------------------------------------------------------------------------------------#
     # K Lloyd 2016_09_16
     #-------------------------------------------------------------------------------------------------------#
-    # Applies random survival forest as Yuan et al. (2015)                                     
+    # Applies random survival forest as Yuan et al. (2014)                                     
     #-------------------------------------------------------------------------------------------------------#
 	source('rsfcvMolClinical.R')
 	source('rsfcvMol.R')

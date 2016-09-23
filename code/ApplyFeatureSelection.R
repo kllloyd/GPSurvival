@@ -2,7 +2,7 @@ ApplyFeatureSelection <- function(trainingTestStructure,dataOptionsStructure,par
   #-------------------------------------------------------------------------------------------------------#
   # K Lloyd 2016_09_16
   #-------------------------------------------------------------------------------------------------------#
-  # Applies feature selection via significance when run as features in Cox PH model (Yuan et al., 2015)
+  # Applies feature selection via significance when run as features in Cox PH model (Yuan et al., 2014)
   # Also normalises/standardises training and test data                             
   # To be applied to data for GP models                                             
   #-------------------------------------------------------------------------------------------------------#
