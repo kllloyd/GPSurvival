@@ -15,13 +15,13 @@ ApplyGP <- function(trainingTestStructure,dataOptionsStructure,parameterStructur
 	#-------------------------------------------------------------------------------------------------------#
 	#-------------------------------- Load required libraries and functions --------------------------------#
 	#-------------------------------------------------------------------------------------------------------#
-	debugSource('ForOptimisationLog.R')
-	debugSource('OptimisationGradientLog.R')
-	debugSource('GPRegression.R')
-	debugSource('GPPredict.R')
-	debugSource('CovFunc.R')
-	debugSource('MeanFunc.R')
-	debugSource('AdjustTrainingSurvivalMeanVariance.R')
+	source('ForOptimisationLog.R')
+	source('OptimisationGradientLog.R')
+	source('GPRegression.R')
+	source('GPPredict.R')
+	source('CovFunc.R')
+	source('MeanFunc.R')
+	source('AdjustTrainingSurvivalMeanVariance.R')
 
 	modelType 		<- parameterStructure$modelType
 	tolerance 		<- parameterStructure$tolerance
