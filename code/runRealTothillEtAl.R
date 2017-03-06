@@ -6,21 +6,17 @@
 # Models applied: AFT, Cox PH, Glmnet, RSF, GP, GPS1, GPS2, GPS3
 #--------------------------------------------------------------------------------------------------------------------------------------------#
 
-## RunAllModelsIncGPLaplace (2016_03_09) 																	##
-## Applying Gaussian process to synthetic data generated with censored survival times in the training set. 	##
-## Data provided. 10 repeats available, change nReps to run more. 											##
-## All models applied to the same data. Models are:	GPNonSurvNoCens, GPSurvNoCorr, GPSurvCorrL, 			##
-## 													GPSurvCorrV, GPSurvLaplace, AFT, Coxph, Glmnet, GBM, 	##
-##													RF and RFSurvival. 										##
-## Results saved to folder 'Runs' within working directory. 												##
-## GPSurv with Laplace approximation is implemented by ApplyGPLaplace, and other GP methods by ApplyGP.		##
-## Gradients are not available for optimisation within GPLaplace, but are available for other GP methods.	##
-## To implement profiling, uncomment lines bracketing model calls and analysis at the end of this file.		##
+## Applying Gaussian process to synthetic data generated with censored survival times in the training set. 		##
+## Data provided. 10 repeats available, change nReps to run more. 												##
+## All models applied to the same data. Models are:	GPNonSurvNoCens, GPSurvNoCorr, GPSurvCorrL, 				##
+## 													GPSurvCorrV, AFT, Coxph, Glmnet, GBM, RF and RFSurvival.	##
+## Results saved to folder 'Runs' within working directory. 													##
 
 
 ##-------------------------------------------------------------------------------------##
 ##---------------------------------- Load Libraries -----------------------------------##
 ##-------------------------------------------------------------------------------------##
+
 library(curatedOvarianData)
 library(fields)
 library(gbm)
@@ -55,7 +51,7 @@ source('ApplyRFSurvival.R')
 source('CalculateMetrics.R')
 source('CensorData.R')
 source('CovFunc.R')
-source('DataExtractionCuratedOvarian.R')
+source('DataExtraction.R')
 source('ImputeMissingData.R')
 source('GenerateData.R')
 source('GetDataSetFeatures.R')
@@ -82,18 +78,23 @@ dataSetChoice 	<- 'OCGS'
 switch(dataSetChoice,
 	'OCGS' 			={geneSubsetFlag 		<- 'TaqMan' 
 					  clinicalSubsetFlag 	<- 'None'
-					  dimension 			<- 97},
+					  dimension 			<- 97
+					  unidk 				<- 1},
 	'OCGS+Clinical'	={geneSubsetFlag 		<- 'TaqMan' 
 					  clinicalSubsetFlag 	<- 'Four'
-					  dimension 			<- 100},
+					  dimension 			<- 100
+					  unidk 				<- 2},
 	'SRGS'			={geneSubsetFlag 		<- 'SRGS1'
 					  clinicalSubsetFlag 	<- 'None'
-					  dimension 			<- 84},
+					  dimension 			<- 84
+					  unidk 				<- 3},
 	'SRGS+Clinical'	={geneSubsetFlag 		<- 'SRGS1'
 					  clinicalSubsetFlag 	<- 'Four'
-					  dimension 			<- 87})
+					  dimension 			<- 87
+					  unidk 				<- 4})
 
-allParameterStructures 	<- SetParametersRealTothill(geneSubsetFlag=geneSubsetFlag,clinicalSubsetFlag=clinicalSubsetFlag,dimension=dimension,nReps=nReps)
+unid 					<- paste0(format(Sys.time(),format='y%Ym%md%dh%Hm%Ms%S'),'k',unidk)
+allParameterStructures 	<- SetParametersRealTothill(geneSubsetFlag=geneSubsetFlag,clinicalSubsetFlag=clinicalSubsetFlag,dimension=dimension,nReps=nReps,unid=unid)
 plotSaveOptions 		<- allParameterStructures$plotSaveOptions
 dataOptionsStructure 	<- allParameterStructures$dataOptionsStructure
 parameterStructure 		<- allParameterStructures$parameterStructure

@@ -10,6 +10,7 @@
 ##-------------------------------------------------------------------------------------##
 ##---------------------------------- Load Libraries -----------------------------------##
 ##-------------------------------------------------------------------------------------##
+
 library(fields)
 library(gbm)
 library(glmnet)
@@ -86,11 +87,12 @@ trainingTestStructureForNReps 	<- list()
 
 censoredProportionToRun 		<- c(0.01,0.10,0.30,0.50,0.70,0.90,0.98)
 unids 							<- rep(NA,length(censoredProportionToRun))
-count 							<- 1
 
 for(k in 1:length(censoredProportionToRun)){
+	unid 									<- format(Sys.time(),format='y%Ym%md%dh%Hm%Ms%S')
+
 	## Generate parameters ##
-	allParameterStructures 					<- SetParametersExp3(nTraining=500,nTest=100,hypGenerateNoise=0.20,censoredProportion=censoredProportionToRun[k],nReps=nReps)
+	allParameterStructures 					<- SetParametersExp3(nTraining=500,nTest=100,hypGenerateNoise=0.20,censoredProportion=censoredProportionToRun[k],nReps=nReps,unid=unid)
 
 	## Make data ##
 	trainingTestStructureForNReps 			<- GenerateData(allParameterStructures$dataOptionsStructure,allParameterStructures$plotSaveOptions$outerFolder,nReps)
@@ -170,14 +172,14 @@ for(k in 1:length(censoredProportionToRun)){
 				replayPlot(outputStructureGPSurvNoCorr[[i]]$plot3)
 			}
 		dev.off(pdf.output)
-
+	
 		pdf(paste0('Runs/',allParameterStructures$parameterStructure$unid,'/','GPSurvNoCorr','/',allParameterStructures$parameterStructure$unid,'GPS1','PlotMeasuredPredicted.pdf'),width=10,height=8,onefile=TRUE)
 		pdf.output <- dev.cur()
 			for(i in c(1:nReps)){
 				replayPlot(outputStructureGPSurvNoCorr[[i]]$plot2)
 			}
 		dev.off(pdf.output)
-
+	
 		pdf(paste0('Runs/',allParameterStructures$parameterStructure$unid,'/','GPSurvNoCorr','/',allParameterStructures$parameterStructure$unid,'GPS1','PlotHyperparam.pdf'),width=10,height=8,onefile=TRUE)
 		pdf.output <- dev.cur()
 			for(i in c(1:nReps)){
@@ -195,7 +197,7 @@ for(k in 1:length(censoredProportionToRun)){
 				replayPlot(outputStructureGPNonSurvNoCens[[i]]$plot2)
 			}
 		dev.off(pdf.output)
-
+	
 		pdf(paste0('Runs/',allParameterStructures$parameterStructure$unid,'/','GPNonSurv','/',allParameterStructures$parameterStructure$unid,'GP','PlotHyperparam.pdf'),width=10,height=8,onefile=TRUE)
 		pdf.output <- dev.cur()
 			for(i in c(1:nReps)){
@@ -235,7 +237,7 @@ for(k in 1:length(censoredProportionToRun)){
 	}
 
 	## Rename and save outputStructures so not overwritten ##
-	unids[count] 	<- allParameterStructures$parameterStructure$unid
+	unids[k] 	<- allParameterStructures$parameterStructure$unid
 
 	assign(paste0(allParameterStructures$parameterStructure$unid,'outputStructureGPSurvNoCorr'),outputStructureGPSurvNoCorr)
 	assign(paste0(allParameterStructures$parameterStructure$unid,'outputStructureGPNonSurvNoCens'),outputStructureGPNonSurvNoCens)
@@ -248,10 +250,7 @@ for(k in 1:length(censoredProportionToRun)){
 	save(list=paste0(allParameterStructures$parameterStructure$unid,'outputStructureRF'),file=paste0('Runs/',allParameterStructures$parameterStructure$unid,'/',allParameterStructures$parameterStructure$unid,'RFWorkspace.RData'))
 	save(list=paste0(allParameterStructures$parameterStructure$unid,'outputStructureRFSurvival'),file=paste0('Runs/',allParameterStructures$parameterStructure$unid,'/',allParameterStructures$parameterStructure$unid,'RFSurvivalWorkspace.RData'))
 	save(list=paste0(allParameterStructures$parameterStructure$unid,'outputStructureCoxph'),file=paste0('Runs/',allParameterStructures$parameterStructure$unid,'/',allParameterStructures$parameterStructure$unid,'CoxphWorkspace.RData'))
-
-	count 			<- count + 1
 }
-
 
 ##-------------------------------------------------------------------------------------##
 ##----------------------------------- Plot Results ------------------------------------##

@@ -11,6 +11,11 @@
 # Platforms: Clinical, SCNA, mRNA, miRNA, protein (methyl is also available)
 #--------------------------------------------------------------------------------------------------------------------------------------------#
 
+
+##-------------------------------------------------------------------------------------##
+##---------------------------------- Load Libraries -----------------------------------##
+##-------------------------------------------------------------------------------------##
+
 library(fields)
 library(foreach)
 library(glmnet)
@@ -28,8 +33,12 @@ library(survcomp)
 library(survival)
 library(zoo)
 library(synapseClient)
-synapseLogin('k.lloyd.1@warwick.ac.uk', 'Synapse3182')
-# synapseLogin()
+synapseLogin()
+
+
+##-------------------------------------------------------------------------------------##
+##--------------------------------- Source Functions ----------------------------------##
+##-------------------------------------------------------------------------------------##
 
 source('add.alpha.R')
 source('ApplyFeatureSelection.R')
@@ -53,35 +62,53 @@ source('RemoveCensored.R')
 source('RunAllModelsAllCombinations.R')
 source('SetParametersRealYuan.R')
 
-cancersMolecular 	<- list('KIRC'=c('None','SCNA','mRNA','miRNA','protein','SCNA','mRNA','miRNA','protein'),
-							'OV'=c('None','SCNA','mRNA','miRNA','protein','SCNA','mRNA','miRNA','protein'),
-							'GBM'=c('None','SCNA','mRNA','miRNA','SCNA','mRNA','miRNA'),
-							'LUSC'=c('None','SCNA','mRNA','miRNA','protein','SCNA','mRNA','miRNA','protein'))
-cancersClinical 	<- 	list('KIRC'=c(TRUE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE),
-							'OV'=c(TRUE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE),
-							'GBM'=c(TRUE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE),
-							'LUSC'=c(TRUE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE))
-nReps 				<- 100
-modelNames 			<- c('Cox','RSF','GP','GPS1','GPS2','GPS3')
-c.index 			<- matrix(NA,ncol=length(modelNames),nrow=nReps)
+
+##-------------------------------------------------------------------------------------##
+##------------------------------ Folder & Run Parameters ------------------------------##
+##-------------------------------------------------------------------------------------##
+
 cancer 				<- 'KIRC'
+nReps 				<- 100
 
-# for(j in 1:length(cancersMolecular[[cancer]])){
-for(j in 1:1){
-	assign(paste0('outputStructure',cancer),RunAllModelsAllCombinations(cancer,cancersMolecular[[cancer]][j],cancersClinical[[cancer]][j],nReps))
-	save(list=paste0('outputStructure',cancer),file=paste0('Runs','/',eval(parse(text=paste0('outputStructure',cancer,'$parameterStructure$unid'))),'/','outputStructure',cancer,'_',cancersMolecular[[cancer]][j],'_',cancersClinical[[cancer]][j],'_','Workspace.RData'))
+cancersMolecular 	<- list('KIRC'	=c('None','SCNA','methyl','mRNA','miRNA','protein','SCNA','methyl','mRNA','miRNA','protein'),
+							'OV'	=c('None','SCNA','methyl','mRNA','miRNA','protein','SCNA','methyl','mRNA','miRNA','protein'),
+							'GBM'	=c('None','SCNA','methyl','mRNA','miRNA','SCNA','methyl','mRNA','miRNA'),
+							'LUSC'	=c('None','SCNA','mRNA','miRNA','protein','SCNA','mRNA','miRNA','protein'))
+cancersClinical 	<- list('KIRC'	=c(TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE,TRUE),
+							'OV'	=c(TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE,TRUE),
+							'GBM'	=c(TRUE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE),
+							'LUSC'	=c(TRUE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE))
+k 					<- switch(cancer,
+							'KIRC' 	= 1,
+							'OV' 	= 2,
+							'GBM' 	= 3,
+							'LUSC' 	= 4)
+modelNames 			<- c('Cox','RSF','GP','GPS1','GPS2','GPS3')
 
+##-------------------------------------------------------------------------------------##
+##------------------------------------ Initialise -------------------------------------##
+##-------------------------------------------------------------------------------------##
+
+c.index 			<- matrix(NA,ncol=length(modelNames),nrow=nReps)
+
+for(k in 1:length(cancersMolecular[[cancer]])){
+	## Run models & save results ##
+	assign(paste0('outputStructure',cancer),RunAllModelsAllCombinations(cancer,cancersMolecular[[cancer]][k],cancersClinical[[cancer]][k],nReps,k))
+	save(list=paste0('outputStructure',cancer),file=paste0('Runs','/',eval(parse(text=paste0('outputStructure',cancer,'$parameterStructure$unid'))),'/','outputStructure',cancer,'_',cancersMolecular[[cancer]][k],'_',cancersClinical[[cancer]][k],'_','Workspace.RData'))
+
+	# Extract c index #
 	unid 				<- eval(parse(text=paste0('outputStructure',cancer,'$outputStructure',modelNames[3],'[[',1,']]$parameterStructure$unid')))
-	for(k in 1:nReps){
-		c.index[k,1] <- eval(parse(text=paste0('outputStructure',cancer,'$outputStructure',modelNames[1],'[[',k,']]$c.index')))
-		c.index[k,2] <- eval(parse(text=paste0('outputStructure',cancer,'$outputStructure',modelNames[2],'[[',k,']]$c.index')))
-		c.index[k,3] <- 1-eval(parse(text=paste0('outputStructure',cancer,'$outputStructure',modelNames[3],'[[',k,']]$c.index')))
-		c.index[k,4] <- 1-eval(parse(text=paste0('outputStructure',cancer,'$outputStructure',modelNames[4],'[[',k,']]$c.index')))
-		c.index[k,5] <- 1-eval(parse(text=paste0('outputStructure',cancer,'$outputStructure',modelNames[5],'[[',k,']]$c.index')))
-		c.index[k,6] <- 1-eval(parse(text=paste0('outputStructure',cancer,'$outputStructure',modelNames[6],'[[',k,']]$c.index')))
+	for(i in 1:nReps){
+		c.index[i,1] <- eval(parse(text=paste0('outputStructure',cancer,'$outputStructure',modelNames[1],'[[',i,']]$c.index')))
+		c.index[i,2] <- eval(parse(text=paste0('outputStructure',cancer,'$outputStructure',modelNames[2],'[[',i,']]$c.index')))
+		c.index[i,3] <- 1-eval(parse(text=paste0('outputStructure',cancer,'$outputStructure',modelNames[3],'[[',i,']]$c.index')))
+		c.index[i,4] <- 1-eval(parse(text=paste0('outputStructure',cancer,'$outputStructure',modelNames[4],'[[',i,']]$c.index')))
+		c.index[i,5] <- 1-eval(parse(text=paste0('outputStructure',cancer,'$outputStructure',modelNames[5],'[[',i,']]$c.index')))
+		c.index[i,6] <- 1-eval(parse(text=paste0('outputStructure',cancer,'$outputStructure',modelNames[6],'[[',i,']]$c.index')))
 	}
 
-	pdf(file=paste0('Runs',"/",unid,'/','PlotCIndex',cancer,'_',cancersMolecular[[cancer]][j],'_',cancersClinical[[cancer]][j],'.pdf'),width=8, height=6)
+	# Save plots #
+	pdf(file=paste0('Runs',"/",unid,'/','PlotCIndex',cancer,'_',cancersMolecular[[cancer]][k],'_',cancersClinical[[cancer]][k],'.pdf'),width=8, height=6)
 	pdf.output <- dev.cur()
 		boxplot(c.index,ylim=c(0.3,1),names=modelNames,ylab='Concordance Index',col='cadetblue3',las=2)
 	dev.off(pdf.output)

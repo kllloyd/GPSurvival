@@ -10,6 +10,7 @@
 ##-------------------------------------------------------------------------------------##
 ##---------------------------------- Load Libraries -----------------------------------##
 ##-------------------------------------------------------------------------------------##
+
 library(fields)
 library(gbm)
 library(glmnet)
@@ -64,6 +65,7 @@ set.seed(as.integer((as.double(Sys.time())*1000+Sys.getpid())%%2^31))
 unid 					<- format(Sys.time(),format='y%Ym%md%dh%Hm%Ms%S')
 outerFolder 			<- 'Runs'
 folderName 				<- paste0(outerFolder,'/',unid)
+dir.create(file.path(getwd(),outerFolder),showWarnings=FALSE)
 
 nReps 					<- 20
 
@@ -265,21 +267,21 @@ if(printResults){
 							##--- Plot Kaplan-Meier Plots ---##
 							##-------------------------------##
 if(savePlots){
-	pdf(paste0('Runs/',unid,'/','GPSurvNoCorr','/',unid,'GPS1','PlotMeasuredKM.pdf'),width=10,height=8,onefile=TRUE)
+	pdf(paste0('Runs/',unid,'/','GPSurvNoCorr','/',unid,'GPSurvNoCorr','PlotMeasuredKM.pdf'),width=10,height=8,onefile=TRUE)
 	pdf.output <- dev.cur()
 		for(i in c(1:nReps)){
 			replayPlot(outputStructureGPSurvNoCorr[[i]]$plot3)
 		}
 	dev.off(pdf.output)
 
-	pdf(paste0('Runs/',unid,'/','GPSurvCorrL','/',unid,'GPS2','PlotMeasuredKM.pdf'),width=10,height=8,onefile=TRUE)
+	pdf(paste0('Runs/',unid,'/','GPSurvCorrL','/',unid,'GPSurvCorrL','PlotMeasuredKM.pdf'),width=10,height=8,onefile=TRUE)
 	pdf.output <- dev.cur()
 		for(i in c(1:nReps)){
 			replayPlot(outputStructureGPSurvCorrL[[i]]$plot3)
 		}
 	dev.off(pdf.output)
 
-	pdf(paste0('Runs/',unid,'/','GPSurvCorrV','/',unid,'GPS3','PlotMeasuredKM.pdf'),width=10,height=8,onefile=TRUE)
+	pdf(paste0('Runs/',unid,'/','GPSurvCorrV','/',unid,'GPSurvCorrV','PlotMeasuredKM.pdf'),width=10,height=8,onefile=TRUE)
 	pdf.output <- dev.cur()
 		for(i in c(1:nReps)){
 			replayPlot(outputStructureGPSurvCorrV[[i]]$plot3)
@@ -291,28 +293,28 @@ if(savePlots){
 							##--- Plot Measured/Predicted ---##
 							##-------------------------------##
 if(savePlots){
-	pdf(paste0('Runs/',unid,'/','GPNonSurv','/',unid,'GP','PlotMeasuredPredicted.pdf'),width=10,height=8,onefile=TRUE)
+	pdf(paste0('Runs/',unid,'/','GPNonSurv','/',unid,'GPNonSurv','PlotMeasuredPredicted.pdf'),width=10,height=8,onefile=TRUE)
 	pdf.output <- dev.cur()
 		for(i in c(1:nReps)){
 			replayPlot(outputStructureGPNonSurvNoCens[[i]]$plot2)
 		}
 	dev.off(pdf.output)
 
-	pdf(paste0('Runs/',unid,'/','GPSurvNoCorr','/',unid,'GPS1','PlotMeasuredPredicted.pdf'),width=10,height=8,onefile=TRUE)
+	pdf(paste0('Runs/',unid,'/','GPSurvNoCorr','/',unid,'GPSurvNoCorr','PlotMeasuredPredicted.pdf'),width=10,height=8,onefile=TRUE)
 	pdf.output <- dev.cur()
 		for(i in c(1:nReps)){
 			replayPlot(outputStructureGPSurvNoCorr[[i]]$plot2)
 		}
 	dev.off(pdf.output)
 
-	pdf(paste0('Runs/',unid,'/','GPSurvCorrL','/',unid,'GPS2','PlotMeasuredPredicted.pdf'),width=10,height=8,onefile=TRUE)
+	pdf(paste0('Runs/',unid,'/','GPSurvCorrL','/',unid,'GPSurvCorrL','PlotMeasuredPredicted.pdf'),width=10,height=8,onefile=TRUE)
 	pdf.output <- dev.cur()
 		for(i in c(1:nReps)){
 			replayPlot(outputStructureGPSurvCorrL[[i]]$plot2)
 		}
 	dev.off(pdf.output)
 
-	pdf(paste0('Runs/',unid,'/','GPSurvCorrV','/',unid,'GPS3','PlotMeasuredPredicted.pdf'),width=10,height=8,onefile=TRUE)
+	pdf(paste0('Runs/',unid,'/','GPSurvCorrV','/',unid,'GPSurvCorrV','PlotMeasuredPredicted.pdf'),width=10,height=8,onefile=TRUE)
 	pdf.output <- dev.cur()
 		for(i in c(1:nReps)){
 			replayPlot(outputStructureGPSurvCorrV[[i]]$plot2)
@@ -324,7 +326,7 @@ if(savePlots){
 							##--- Plot GP Hyperparameters ---##
 							##-------------------------------##
 if(savePlots){
-	pdf(paste0('Runs/',unid,'/','GPNonSurv','/',unid,'GP','PlotHyperparam.pdf'),width=10,height=8,onefile=TRUE)
+	pdf(paste0('Runs/',unid,'/','GPNonSurv','/',unid,'GPNonSurv','PlotHyperparam.pdf'),width=10,height=8,onefile=TRUE)
 	pdf.output <- dev.cur()
 		for(i in c(1:nReps)){
 			matplot(rbind(unlist(t(outputStructureGPNonSurvNoCens[[i]]$logHypChosen[1:3])),unlist(t(outputStructureGPNonSurvNoCens[[i]]$parameterStructure$logHypStart[1:3]))),
@@ -333,7 +335,7 @@ if(savePlots){
 		}
 	dev.off(pdf.output)
 
-	pdf(paste0('Runs/',unid,'/','GPSurvNoCorr','/',unid,'GPS1','PlotHyperparam.pdf'),width=10,height=8,onefile=TRUE)
+	pdf(paste0('Runs/',unid,'/','GPSurvNoCorr','/',unid,'GPSurvNoCorr','PlotHyperparam.pdf'),width=10,height=8,onefile=TRUE)
 	pdf.output <- dev.cur()
 		for(i in c(1:nReps)){
 			matplot(outputStructureGPSurvNoCorr[[i]]$logHypTable[,1:3],type='l',ylab ='Hyperparameters',xlab='Cycle number')
@@ -341,7 +343,7 @@ if(savePlots){
 		}
 	dev.off(pdf.output)
 
-	pdf(paste0('Runs/',unid,'/','GPSurvCorrL','/',unid,'GPS2','PlotHyperparam.pdf'),width=10,height=8,onefile=TRUE)
+	pdf(paste0('Runs/',unid,'/','GPSurvCorrL','/',unid,'GPSurvCorrL','PlotHyperparam.pdf'),width=10,height=8,onefile=TRUE)
 	pdf.output <- dev.cur()
 		for(i in c(1:nReps)){
 			matplot(outputStructureGPSurvCorrL[[i]]$logHypTable[,1:3],type='l',ylab ='Hyperparameters',xlab='Cycle number')
@@ -349,7 +351,7 @@ if(savePlots){
 		}
 	dev.off(pdf.output)
 
-	pdf(paste0('Runs/',unid,'/','GPSurvCorrV','/',unid,'GPS3','PlotHyperparam.pdf'),width=10,height=8,onefile=TRUE)
+	pdf(paste0('Runs/',unid,'/','GPSurvCorrV','/',unid,'GPSurvCorrV','PlotHyperparam.pdf'),width=10,height=8,onefile=TRUE)
 	pdf.output <- dev.cur()
 		for(i in c(1:nReps)){
 			matplot(outputStructureGPSurvCorrV[[i]]$logHypTable[,1:3],type='l',ylab ='Hyperparameters',xlab='Cycle number')
@@ -363,21 +365,21 @@ if(savePlots){
 							##--------------------------------##
 if(savePlots){
 	for(i in 1:nReps){
-		pdf(paste0('Runs/',unid,'/','GPSurvNoCorr','/',unid,'GPS1','Run',i,'PlotTrainingTargets1D.pdf'),width=10,height=8,onefile=TRUE)
+		pdf(paste0('Runs/',unid,'/','GPSurvNoCorr','/',unid,'GPSurvNoCorr','Run',i,'PlotTrainingTargets1D.pdf'),width=10,height=8,onefile=TRUE)
 		pdf.output <- dev.cur()
 		PlotTrainingTargetsPrePostLearning(outputStructureGPSurvNoCorr[[i]])
 		dev.off(pdf.output)
 	}
 
 	for(i in 1:nReps){
-		pdf(paste0('Runs/',unid,'/','GPSurvCorrL','/',unid,'GPS2','Run',i,'PlotTrainingTargets1D.pdf'),width=10,height=8,onefile=TRUE)
+		pdf(paste0('Runs/',unid,'/','GPSurvCorrL','/',unid,'GPSurvCorrL','Run',i,'PlotTrainingTargets1D.pdf'),width=10,height=8,onefile=TRUE)
 		pdf.output <- dev.cur()
 		PlotTrainingTargetsPrePostLearning(outputStructureGPSurvCorrL[[i]])
 		dev.off(pdf.output)
 	}
 
 	for(i in 1:nReps){
-		pdf(paste0('Runs/',unid,'/','GPSurvCorrV','/',unid,'GPS3','Run',i,'PlotTrainingTargets1D.pdf'),width=10,height=8,onefile=TRUE)
+		pdf(paste0('Runs/',unid,'/','GPSurvCorrV','/',unid,'GPSurvCorrV','Run',i,'PlotTrainingTargets1D.pdf'),width=10,height=8,onefile=TRUE)
 		pdf.output <- dev.cur()
 		PlotTrainingTargetsPrePostLearning(outputStructureGPSurvCorrV[[i]])
 		dev.off(pdf.output)
