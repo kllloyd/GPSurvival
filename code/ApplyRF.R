@@ -50,7 +50,7 @@ ApplyRF <- function(trainingTestStructure,dataOptionsStructure,parameterStructur
 		cat('\tGenerating log hyperparameters were',unlist(dataOptionsStructure$logHypGenerate),fill=TRUE)
 		cat('\tSamples were produced on a grid between',dataOptionsStructure$gridMinimum,'and',dataOptionsStructure$gridMaximum,fill=TRUE)
 		cat('\tCensoring was',dataOptionsStructure$censoringType,'with level sigma =',dataOptionsStructure$censoringLevel,fill=TRUE)
-		if(dataOptionsStructure$covFuncFormGen=='Matern'){cat('\tCovariance function was',dataOptionsStructure$covFuncFormGen,'with Matern parameter set to',dataOptionsStructure$maternParamGen,fill=TRUE)
+		if(dataOptionsStructure$covFuncFormGen=='Matern'){cat('\tCovariance function was',dataOptionsStructure$covFuncFormGen,'with Matern parameter set to',dataOptionsStructure$extraParamGen,fill=TRUE)
 		} else {cat('\tCovariance function was',dataOptionsStructure$covFuncFormGen,fill=TRUE)}
 		cat('\tMean function was',dataOptionsStructure$meanFuncFormGen,fill=TRUE)
 
@@ -86,14 +86,18 @@ ApplyRF <- function(trainingTestStructure,dataOptionsStructure,parameterStructur
 	#-------------------------------------------------------------------------------------------------------#
 	#---------------------------------------- Random Forest Model ------------------------------------------#
 	#-------------------------------------------------------------------------------------------------------#
-	model.rf 			= rfsrc(V1~.,data=trainingAll,na.action='na.impute',importance=TRUE)
-	modelCoefficients 	= model.rf$importance
-	pred 				= predict(model.rf,testAll)
-	predictions 		= pred$predicted
-	c.index 			= CalculateMetrics(exp(predictions),exp(testAll$V1),testEvents)$c.index
+	model.rf 			<- rfsrc(V1~.,data=trainingAll,na.action='na.impute',importance=TRUE)
+	modelCoefficients 	<- model.rf$importance
+	predTrain 			<- predict(model.rf)
+	trainingPredictions <- predTrain$predicted
+	predTest 			<- predict(model.rf,testAll)
+	testPredictions 	<- predTest$predicted
+	metricStructure 	<- CalculateMetrics(exp(testPredictions),exp(testAll$V1),testEvents,exp(trainingPredictions),exp(trainingAll$V1),trainingEvents)
+	c.index 			<- metricStructure$c.index
+	rmse 				<- metricStructure$rmse
 
-	timeEnd   			= Sys.time()
-	timeTaken 			= difftime(timeEnd,timeStart, units='min')
+	timeEnd   			<- Sys.time()
+	timeTaken 			<- difftime(timeEnd,timeStart, units='min')
 
 	#-------------------------------------------------------------------------------------------------------#
 	#--------------------------------- Print and save variables and plots ----------------------------------#
@@ -107,10 +111,11 @@ ApplyRF <- function(trainingTestStructure,dataOptionsStructure,parameterStructur
 	}
 
 	if(printPlots){
-		plot(predictions,testAll$V1,ylim=c(0,max(testAll$V1)),xlab='Predicted Survival, Random Forest',ylab='Measured Survival',main=paste0('c.index = ',round(c.index,2)))
+		plot(testPredictions,testAll$V1,ylim=c(0,max(testAll$V1)),xlab='Predicted Survival, Random Forest',ylab='Measured Survival',main=paste0('c.index = ',round(c.index,2)))
 		abline(0,1)
+		plot2 <- recordPlot()
 
-		PlotKaplanMeier(predictions,testAll$V1,testEvents,model)
+		PlotKaplanMeier(testPredictions,testAll$V1,testEvents,model)
 		plotKM <- recordPlot()
 		# plotKM <- NULL
 	}
@@ -122,16 +127,19 @@ ApplyRF <- function(trainingTestStructure,dataOptionsStructure,parameterStructur
 			cat('C Index = ',c.index,fill=TRUE)
 			cat('-------------------------------------------------------',fill=TRUE)
 		sink()
-		write.table(predictions,paste0(fileName,'RFTestTargetPredictions.csv'),sep=',',quote=FALSE,row.names=FALSE)
+		write.table(testPredictions,paste0(fileName,'RFTestTargetPredictions.csv'),sep=',',quote=FALSE,row.names=FALSE)
 		write.table(testAll$V1,paste0(fileName,'RFTestTargets.csv'),sep=',',quote=FALSE,row.names=FALSE)
 	}
 
 	#-------------------------------------------------------------------------------------------------------#
 	#-------------------------------------------- Return output --------------------------------------------#
 	#-------------------------------------------------------------------------------------------------------#
-	toReturn = list('timeTaken'=timeTaken,'predictions'=predictions,'c.index'=c.index,'model'='RF','modelVariables'=modelCoefficients,
-					'trainingTestStructure'=trainingTestStructure)
-	if(printPlots) toReturn$'plotKM' <- plotKM
+	toReturn = list('timeTaken'=timeTaken,'trainingPredictions'=trainingPredictions,'testPredictions'=testPredictions,'c.index'=c.index,'rmse'=rmse,
+					'model'='RF','modelVariables'=modelCoefficients,'trainingTestStructure'=trainingTestStructure)
+	if(printPlots){
+		toReturn$plotKM <- plotKM
+		toReturn$plot2	<- plot2
+	}
 
 	return(toReturn)
 }

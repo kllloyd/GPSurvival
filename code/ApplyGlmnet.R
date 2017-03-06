@@ -50,7 +50,7 @@ ApplyGlmnet <- function(trainingTestStructure,dataOptionsStructure,parameterStru
 		cat('\tGenerating log hyperparameters were',unlist(dataOptionsStructure$logHypGenerate),fill=TRUE)
 		cat('\tSamples were produced on a grid between',dataOptionsStructure$gridMinimum,'and',dataOptionsStructure$gridMaximum,fill=TRUE)
 		cat('\tCensoring was',dataOptionsStructure$censoringType,'with level sigma =',dataOptionsStructure$censoringLevel,fill=TRUE)
-		if(dataOptionsStructure$covFuncFormGen=='Matern'){cat('\tCovariance function was',dataOptionsStructure$covFuncFormGen,'with Matern parameter set to',dataOptionsStructure$maternParamGen,fill=TRUE)
+		if(dataOptionsStructure$covFuncFormGen=='Matern'){cat('\tCovariance function was',dataOptionsStructure$covFuncFormGen,'with Matern parameter set to',dataOptionsStructure$extraParamGen,fill=TRUE)
 		} else {cat('\tCovariance function was',dataOptionsStructure$covFuncFormGen,fill=TRUE)}
 		cat('\tMean function was',dataOptionsStructure$meanFuncFormGen,fill=TRUE)
 
@@ -88,25 +88,20 @@ ApplyGlmnet <- function(trainingTestStructure,dataOptionsStructure,parameterStru
 	#-------------------------------------------------------------------------------------------------------#
 	## IDEA FROM http://r.789695.n4.nabble.com/estimating-survival-times-with-glmnet-and-coxph-td4614225.html
 
-	# out <- tryCatch({
-		responseStatus = cbind(trainingAll$y,trainingAll$event)
-					 rownames(responseStatus) = NULL
-					 colnames(responseStatus) = c('time','status')
-					 model.glmnet 					= glmnet(as.matrix(subset(trainingAll,select=-c(y,event))),responseStatus, family = 'cox',alpha=0.5)
-					 modelCoefficients.glmnet 		= coef(model.glmnet, s = model.glmnet$lambda[which.max(model.glmnet$dev.ratio)])
-					 selectedCoefIndex.glmnet 		= which(abs(modelCoefficients.glmnet)>0)
-					 modelVariablesSelected 		= names(subset(trainingAll,select=-c(y,event)))[selectedCoefIndex.glmnet]
-					 model.glmnet.coxph 			= coxph(as.formula(paste0('Surv(y,event) ~',paste(paste0('x',1:dimension)[which(abs(modelCoefficients.glmnet)>0)],collapse='+'))),data=trainingAll[,c(rownames(modelCoefficients.glmnet)[which(abs(modelCoefficients.glmnet)>0)],'y','event')],init=modelCoefficients.glmnet[which(abs(modelCoefficients.glmnet)>0)],iter=0)
-					 modelCoefficients.glmnet.coxph = model.glmnet.coxph$coefficients
-					 predictions 					= predict(model.glmnet.coxph, testAll,type='lp')
-					 c.index 						= CalculateMetrics(predictions,testAll$y,testAll$event)$c.index
-					 # },
-	               	# error=function(cond) {
-	               	# message('Coxph following glmnet failed')
-	               	# message("Here's the original error message:")
-	               	# message(cond)
-	               	# return(NA)
-	       			# })
+	responseStatus 					<- cbind(trainingAll$y,trainingAll$event)
+	rownames(responseStatus) 		<- NULL
+	colnames(responseStatus) 		<- c('time','status')
+	model.glmnet 					<- glmnet(as.matrix(subset(trainingAll,select=-c(y,event))),responseStatus, family = 'cox',alpha=0.5)
+	modelCoefficients.glmnet 		<- coef(model.glmnet, s = model.glmnet$lambda[which.max(model.glmnet$dev.ratio)])
+	selectedCoefIndex.glmnet 		<- which(abs(modelCoefficients.glmnet)>0)
+	modelVariablesSelected 			<- names(subset(trainingAll,select=-c(y,event)))[selectedCoefIndex.glmnet]
+	model.glmnet.coxph 				<- coxph(as.formula(paste0('Surv(y,event) ~',paste(paste0('x',1:dimension)[which(abs(modelCoefficients.glmnet)>0)],collapse='+'))),data=trainingAll[,c(rownames(modelCoefficients.glmnet)[which(abs(modelCoefficients.glmnet)>0)],'y','event')],init=modelCoefficients.glmnet[which(abs(modelCoefficients.glmnet)>0)],iter=0)
+	modelCoefficients.glmnet.coxph 	<- model.glmnet.coxph$coefficients
+	trainingPredictions 			<- predict(model.glmnet.coxph,type='lp')
+	testPredictions 				<- predict(model.glmnet.coxph,testAll,type='lp')
+	metricStructure  				<- CalculateMetrics(testPredictions,testAll$y,testAll$event,trainingPredictions,trainingAll$y,trainingAll$event)
+	c.index 						<- metricStructure$c.index
+	rmse 							<- metricStructure$rmse
 
 	timeEnd   	= Sys.time()
 	timeTaken 	= difftime(timeEnd,timeStart, units='min')
@@ -123,10 +118,10 @@ ApplyGlmnet <- function(trainingTestStructure,dataOptionsStructure,parameterStru
 	}
 
 	if(printPlots){
-		plot(predictions,testAll$y,ylim=c(0,max(testAll$y)),xlab='Predicted Survival, GLM with Elastic-net Penalisation',ylab='Measured Survival',main=paste0('c.index = ',round(c.index,2)))
+		plot(testPredictions,testAll$y,ylim=c(0,max(testAll$y)),xlab='Predicted Survival, GLM with Elastic-net Penalisation',ylab='Measured Survival',main=paste0('c.index = ',round(c.index,2)))
 		abline(0,1)
 
-		PlotKaplanMeier(predictions,testAll$y,testAll$event,model)
+		PlotKaplanMeier(testPredictions,testAll$y,testAll$event,model)
 		plotKM <- recordPlot()
 		# plotKM <- NULL
 	}
@@ -138,15 +133,15 @@ ApplyGlmnet <- function(trainingTestStructure,dataOptionsStructure,parameterStru
 			cat('C Index = ',c.index,fill=TRUE)
 			cat('-------------------------------------------------------',fill=TRUE)
 		sink()
-		write.table(predictions,paste0(fileName,'GlmnetTestTargetPredictions.csv'),sep=',',quote=FALSE,row.names=FALSE)
+		write.table(testPredictions,paste0(fileName,'GlmnetTestTargetPredictions.csv'),sep=',',quote=FALSE,row.names=FALSE)
 		write.table(testAll$y,paste0(fileName,'GlmnetTestTargets.csv'),sep=',',quote=FALSE,row.names=FALSE)
 	}
 
 	#-------------------------------------------------------------------------------------------------------#
 	#-------------------------------------------- Return output --------------------------------------------#
 	#-------------------------------------------------------------------------------------------------------#
-	toReturn = list('timeTaken'=timeTaken,'predictions'=predictions,'c.index'=c.index,'model'='Glmnet','modelVariables'=modelVariablesSelected,
-					'trainingTestStructure'=trainingTestStructure)
+	toReturn = list('timeTaken'=timeTaken,'trainingPredictions'=trainingPredictions,'testPredictions'=testPredictions,'c.index'=c.index,'rmse'=rmse,
+					'model'='Glmnet','modelVariables'=modelVariablesSelected,'trainingTestStructure'=trainingTestStructure)
 	if(printPlots) toReturn$'plotKM' <- plotKM
 
 	return(toReturn)

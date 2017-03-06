@@ -1,11 +1,11 @@
-SetParametersRealYuan <- function(cancer,molPlatform,clinicalFlag,nReps){
+SetParametersRealYuan <- function(cancer,molPlatform,clinicalFlag,nReps,unid){
 	#---------------------------------------------------------------------------------------#
 	# K Lloyd 2016_09_16
 	#---------------------------------------------------------------------------------------#
 	# Setting parameters for runRealYuanEtAl.R
 	#---------------------------------------------------------------------------------------#
 
-	unid 					<- format(Sys.time(),format='y%Ym%md%dh%Hm%Ms%S')
+	# unid 					<- format(Sys.time(),format='y%Ym%md%dh%Hm%Ms%S')
 	outerFolder 			<- 'Runs'
 	folderName 				<- paste0(outerFolder,'/',unid)
 	
@@ -42,8 +42,8 @@ SetParametersRealYuan <- function(cancer,molPlatform,clinicalFlag,nReps){
 	
 	logHypGenerate 			<- list('noise'=log(1.1),'func'=log(1.1),'length'=log(1.1),'mean'=c(rep(0,dimension),0))
 	
-	covFuncFormGen 			<- 'SqExp'
-	maternParamGen 			<- 3
+	covFuncFormGen 			<- 'SqExp' 						# 'SqExp', 'Matern', 'ARD'
+	extraParamGen 			<- 3
 	meanFuncFormGen 		<- 'Linear'
 	gridMinimum 			<- 0
 	gridMaximum 			<- 8
@@ -56,7 +56,7 @@ SetParametersRealYuan <- function(cancer,molPlatform,clinicalFlag,nReps){
 	extraDimensions 		<- 0 
 
 	dataOptionsStructure 	<- list('dataSource'=dataSource,'logHypGenerate'=logHypGenerate,'covFuncFormGen'=covFuncFormGen,'meanFuncFormGen'=meanFuncFormGen,
-									'maternParamGen'=maternParamGen,'dimension'=dimension,'nTraining'=nTraining,'nTest'=nTest,'gridMinimum'=gridMinimum,
+									'extraParamGen'=extraParamGen,'dimension'=dimension,'nTraining'=nTraining,'nTest'=nTest,'gridMinimum'=gridMinimum,
 									'gridMaximum'=gridMaximum,'censoringSD'=censoringSD,'censoringMean'=censoringMean,'censoringType'=censoringType,'nCensored'=nCensored,
 									'useARD'=useARD,'extraDimensions'=extraDimensions,'folderName'=folderName,'proportionTest'=proportionTest,
 									'censoredProportion'=censoredProportion,'nReps'=nReps,'cancer'=cancer,'molPlatform'=molPlatform,'clinicalFlag'=clinicalFlag)
@@ -65,10 +65,10 @@ SetParametersRealYuan <- function(cancer,molPlatform,clinicalFlag,nReps){
 	##---------------------------- Gaussian Process Parameters ----------------------------##
 	##-------------------------------------------------------------------------------------##
 	modelType 				<- 'survival' 			# 'non-survival' or 'survival'
-	covFuncForm 			<- 'SqExp'				# 'SqExp' or 'ARD'
+	covFuncForm 			<- 'SqExp'				# 'SqExp', 'Matern', 'ARD', 'InformedARD', 'RF'
 	meanFuncForm 			<- 'Zero'
 	burnIn 					<- FALSE
-	maternParam 			<- 3
+	extraParam 				<- 3
 	tolerance 				<- 0.0001*nTraining*censoredProportion
 	hypChangeTol 			<- 10^-10
 	maxCount 				<- 500
@@ -82,7 +82,7 @@ SetParametersRealYuan <- function(cancer,molPlatform,clinicalFlag,nReps){
 
 	logHypStart 			<- list('noise'=log(0.01),'func'=log(1.1),'length'=log(0.5),'mean'=c(rep(0,dimension),0))
 
-	parameterStructure 		<- list('meanFuncForm'=meanFuncForm,'covFuncForm'=covFuncForm,'maternParam'=maternParam,'maxit'=maxit,'maxitPreLearn'=maxitPreLearn,
+	parameterStructure 		<- list('meanFuncForm'=meanFuncForm,'covFuncForm'=covFuncForm,'extraParam'=extraParam,'maxit'=maxit,'maxitPreLearn'=maxitPreLearn,
 									'maxitSurvival'=maxitSurvival,'optimType'=optimType,'logHypStart'=logHypStart,'modelType'=modelType,'unid'=unid,'tolerance'=tolerance,
 									'maxCount'=maxCount,'hypChangeTol'=hypChangeTol,'burnIn'=burnIn,'maxitLaplace'=maxitLaplace,'noiseCorr'=noiseCorr,
 									'imposePriors'=imposePriors)
@@ -96,11 +96,11 @@ SetParametersRealYuan <- function(cancer,molPlatform,clinicalFlag,nReps){
 		}
 	}
 
-	if(saveFiles){
-		sink(paste0(getwd(),'/',outerFolder,'/',unid,'/',unid,'RunOptions.txt'),append=TRUE)
-			PrintOptions2(dataOptionsStructure,parameterStructure)
-		sink()
-	}
+	# if(saveFiles){
+	# 	sink(paste0(getwd(),'/',outerFolder,'/',unid,'/',unid,'RunOptions.txt'),append=TRUE)
+	# 		PrintOptions2(dataOptionsStructure,parameterStructure)
+	# 	sink()
+	# }
 
 	toReturn <- list('plotSaveOptions'=plotSaveOptions,'dataOptionsStructure'=dataOptionsStructure,'parameterStructure'=parameterStructure)
 

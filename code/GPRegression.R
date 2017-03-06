@@ -16,30 +16,39 @@ GPRegression <- function(logHyp,parameterStructure,trainingTestStructure,logHypN
 	if(modelType=='survival') maxit <- parameterStructure$maxitSurvival else maxit <- parameterStructure$maxit
 	meanFuncForm 	<- parameterStructure$meanFuncForm
 	covFuncForm 	<- parameterStructure$covFuncForm
-	maternParam 	<- parameterStructure$maternParam
+	extraParam 		<- parameterStructure$extraParam
 	imposePriors 	<- parameterStructure$imposePriors
 
 	logHypVec 		<- as.matrix(unlist(logHyp))
 	if(meanFuncForm=='Zero') logHypVec <- logHypVec[-c((length(logHypVec)-dimension):length(logHypVec)),,drop=FALSE]
 	if(noiseCorr=='noiseCorrLearned') logHypVec <- rbind(logHypVec,logHypNoiseCorrection)
+	if(covFuncForm=='RF') logHypVec <- logHypVec[1,,drop=FALSE]
 
 	#---------------------------------------------- Learn hyperparameters ----------------------------------------------#
  	optimOutput 	<- optim(logHypVec,fn=ForOptimisationLog,gr=OptimisationGradientLog,trainingData=trainingData,trainingTargets=trainingTargets,
- 							trainingEvents=trainingEvents,meanFuncForm=meanFuncForm,dimension=dimension,maternParam=maternParam,covFuncForm=covFuncForm,
+ 							trainingEvents=trainingEvents,meanFuncForm=meanFuncForm,dimension=dimension,extraParam=extraParam,covFuncForm=covFuncForm,
  							nSamples=nTraining,noiseCorr=noiseCorr,logHypNoiseCorrection=logHypNoiseCorrection,imposePriors=imposePriors,
  							method=optimType,control=list('maxit'=maxit))
-	logHypVec 		<- optimOutput$par
+ 	logHypVec 		<- optimOutput$par
 	objective 		<- optimOutput$value
+
 	if(noiseCorr=='noiseCorrLearned'){
 		logHypNoiseCorrection 	<- logHypVec[length(logHypVec),,drop=FALSE]
 		logHypVec 				<- logHypVec[-length(logHypVec),,drop=FALSE]
 	}
-	varNoiseSqHyp 	<- exp(logHypVec[1,,drop=FALSE])
-	varFuncSqHyp 	<- exp(logHypVec[2,,drop=FALSE])
+	varNoiseSqHyp 		<- exp(logHypVec[1,,drop=FALSE])
 	if(covFuncForm=='ARD'){
-		lengthHyp 	<- exp(logHypVec[3:(2+dimension),,drop=FALSE])
-	} else {
-		lengthHyp 	<- exp(logHypVec[3,,drop=FALSE])
+		varFuncSqHyp 	<- exp(logHypVec[2,,drop=FALSE])
+		lengthHyp 		<- exp(logHypVec[3:(2+dimension),,drop=FALSE])
+	} else if(covFuncForm=='InformedARD'){
+		varFuncSqHyp 	<- exp(logHypVec[2,,drop=FALSE])
+		lengthHyp 		<- exp(logHypVec[3:(2+length(extraParam)),,drop=FALSE])
+	} else if(covFuncForm=='SqExp'|covFuncForm=='Matern'){
+		varFuncSqHyp 	<- exp(logHypVec[2,,drop=FALSE])
+		lengthHyp 		<- exp(logHypVec[3,,drop=FALSE])
+	} else if(covFuncForm=='RF'){
+		varFuncSqHyp 	<- NA
+		lengthHyp 		<- NA
 	}
 
 	switch(meanFuncForm,
@@ -49,7 +58,7 @@ GPRegression <- function(logHyp,parameterStructure,trainingTestStructure,logHypN
 
 	#-------------- Compute mean vector, covariance matrix and log marginal likelihood using training data -------------#
 	meanTraining 	<- MeanFunc(meanHyp,trainingData,meanFuncForm,nTraining)
-	K 				<- CovFunc(t(trainingData),t(trainingData),maternParam,varFuncSqHyp,lengthHyp,covFuncForm)
+	K 				<- CovFunc(trainingData,trainingData,trainingData,trainingTargets,extraParam,varFuncSqHyp,lengthHyp,covFuncForm)
 	if(noiseCorr=='noiseCorrVec'|noiseCorr=='noiseCorrLearned'){
 		varNoiseSqCorrection 					<- rep(0,nTraining)
 		varNoiseSqCorrection[!trainingEvents] 	<- exp(logHypNoiseCorrection)

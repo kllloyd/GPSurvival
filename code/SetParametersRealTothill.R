@@ -1,11 +1,11 @@
-SetParametersRealTothill <- function(geneSubsetFlag,clinicalSubsetFlag,dimension,nReps){
+SetParametersRealTothill <- function(geneSubsetFlag,clinicalSubsetFlag,dimension,nReps,unid){
 	#---------------------------------------------------------------------------------------#
 	# K Lloyd 2016_09_16
 	#---------------------------------------------------------------------------------------#
 	# Setting parameters for runRealTothillEtAl.R
 	#---------------------------------------------------------------------------------------#
 
-	unid 					<- format(Sys.time(),format='y%Ym%md%dh%Hm%Ms%S')
+	# unid 					<- format(Sys.time(),format='y%Ym%md%dh%Hm%Ms%S')
 	outerFolder 			<- 'Runs'
 	folderName 				<- paste0(outerFolder,'/',unid)
 
@@ -40,7 +40,7 @@ SetParametersRealTothill <- function(geneSubsetFlag,clinicalSubsetFlag,dimension
 	logHypGenerate 			<- list('noise'=log(0.01),'func'=log(1.3),'length'=log(2.1),'mean'=c(rep(0,dimension),0))
 
 	covFuncFormGen 			<- 'SqExp'
-	maternParamGen 			<- 3
+	extraParamGen 			<- 3
 	meanFuncFormGen 		<- 'Linear'
 	gridMinimum 			<- 0
 	gridMaximum 			<- 8
@@ -64,7 +64,7 @@ SetParametersRealTothill <- function(geneSubsetFlag,clinicalSubsetFlag,dimension
 	}
 
 	dataOptionsStructure 	<- list('dataSource'=dataSource,'logHypGenerate'=logHypGenerate,'covFuncFormGen'=covFuncFormGen,
-									'meanFuncFormGen'=meanFuncFormGen,'maternParamGen'=maternParamGen,'dimension'=dimension,
+									'meanFuncFormGen'=meanFuncFormGen,'extraParamGen'=extraParamGen,'dimension'=dimension,
 									'nTraining'=nTraining,'nTest'=nTest,'gridMinimum'=gridMinimum,'gridMaximum'=gridMaximum,
 									'censoringSD'=censoringSD,'censoringMean'=censoringMean,'censoringType'=censoringType,
 									'nCensored'=nCensored,'useARD'=useARD,'extraDimensions'=extraDimensions,'folderName'=folderName,
@@ -88,7 +88,7 @@ SetParametersRealTothill <- function(geneSubsetFlag,clinicalSubsetFlag,dimension
 	covFuncForm 			<- 'SqExp'				# 'SqExp' or 'ARD'
 	meanFuncForm 			<- 'Zero'
 	burnIn 					<- FALSE
-	maternParam 			<- 3
+	extraParam 				<- 3
 	tolerance 				<- 0.00001*nTraining*censoredProportion
 	toleranceLaplace 		<- 0.00001*nTraining*censoredProportion
 	hypChangeTol 			<- 10^-10
@@ -103,7 +103,7 @@ SetParametersRealTothill <- function(geneSubsetFlag,clinicalSubsetFlag,dimension
 	imposePriors 			<- TRUE
 	logHypStart 			<- list('noise'=log(0.9),'func'=log(0.9),'length'=log(0.9),'mean'=c(rep(0,dimension),0))
 
-	parameterStructure 		<- list('meanFuncForm'=meanFuncForm,'covFuncForm'=covFuncForm,'maternParam'=maternParam,'maxit'=maxit,
+	parameterStructure 		<- list('meanFuncForm'=meanFuncForm,'covFuncForm'=covFuncForm,'extraParam'=extraParam,'maxit'=maxit,
 									'maxitPreLearn'=maxitPreLearn,'maxitSurvival'=maxitSurvival,'optimType'=optimType,
 									'logHypStart'=logHypStart,'modelType'=modelType,'unid'=unid,'tolerance'=tolerance,
 									'toleranceLaplace'=toleranceLaplace,'maxCount'=maxCount,'hypChangeTol'=hypChangeTol,'burnIn'=burnIn,

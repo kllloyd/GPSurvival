@@ -1,4 +1,4 @@
-ApplyGP <- function(trainingTestStructure,dataOptionsStructure,parameterStructure,plotSaveOptions){
+ApplyGPDiffInf <- function(trainingTestStructure,dataOptionsStructure,parameterStructure,plotSaveOptions){
 	#--------------------------------------------------------------------------------------------------------------------------------------------#
 	# K Lloyd 2016_09_16
 	#--------------------------------------------------------------------------------------------------------------------------------------------#
@@ -29,18 +29,17 @@ ApplyGP <- function(trainingTestStructure,dataOptionsStructure,parameterStructur
 	hypChangeTol 	<- parameterStructure$hypChangeTol
 	unid 			<- parameterStructure$unid
 	noiseCorr 		<- parameterStructure$noiseCorr
+	inferenceType 	<- parameterStructure$inferenceType
 	burnIn 			<- parameterStructure$burnIn
 	logHypStart 	<- parameterStructure$logHypStart
 	outerFolder 	<- plotSaveOptions$outerFolder
 	censoringType 	<- dataOptionsStructure$censoringType
 
 	if(modelType=='survival'){
-		if(noiseCorr=='noiseCorrLearned'){
-			model <- 'GPSurvCorrL'
-		} else if(noiseCorr=='noiseCorrVec'){
-			model <- 'GPSurvCorrV'
-		} else {
-			model <- 'GPSurvNoCorr'
+		if(inferenceType=='median'){
+			model <- 'GPSurvInfMed'
+		} else if(inferenceType=='uniform'){
+			model <- 'GPSurvInfUnif'
 		}
 	} else {
 			model <- 'GPNonSurv'
@@ -71,29 +70,6 @@ ApplyGP <- function(trainingTestStructure,dataOptionsStructure,parameterStructur
 		
 	# }
 
-	#-------------------------------------------------------------------------------------------------------#
-	#---------------------------- Taking log & median-subtract survival times   ----------------------------#
-	#-------------------------------------------------------------------------------------------------------#
-	if(modelType=='survival'){
-		# Take logs #
-		trainingTestStructure$trainingTargets 	<- log(trainingTestStructure$trainingTargets)
-		trainingTestStructure$testTargets 		<- log(trainingTestStructure$testTargets)
-		if(dataOptionsStructure$dataSource!='CuratedOvarian'&dataOptionsStructure$dataSource!='TCGA2STAT'&dataOptionsStructure$dataSource!='TCGASynapse'&dataOptionsStructure$dataSource!='TCGAYuanEtAl'){
-			trainingTestStructure$trainingTargetsPreCensoring 	<- log(trainingTestStructure$trainingTargetsPreCensoring)
-			trainingTestStructure$testTargetsPreCensoring 		<- log(trainingTestStructure$testTargetsPreCensoring)
-		}
-		# Median subtract #
-		if(dataOptionsStructure$dataSource=='CuratedOvarian'|dataOptionsStructure$dataSource=='TCGA2STAT'|dataOptionsStructure$dataSource=='TCGASynapse'|dataOptionsStructure$dataSource=='TCGAYuanEtAl'){
-			trainingMedian 										<- median(trainingTestStructure$trainingTargets)
-			trainingTestStructure$trainingTargets 				<- trainingTestStructure$trainingTargets - trainingMedian
-			trainingTestStructure$trainingTargetsPreCensoring 	<- trainingTestStructure$trainingTargetsPreCensoring - trainingMedian
-			trainingTestStructure$testTargets 					<- trainingTestStructure$testTargets - trainingMedian
-			trainingTestStructure$testTargetsPreCensoring 		<- trainingTestStructure$testTargetsPreCensoring - trainingMedian
-		}
-	} else if(TRUE){
-		trainingTestStructure$trainingTargets 	<- log(trainingTestStructure$trainingTargets)
-		trainingTestStructure$testTargets 		<- log(trainingTestStructure$testTargets)
-	}
 
 	#-------------------------------------------------------------------------------------------------------#
 	#------------------------------ Separate censored and uncensored samples -------------------------------#
@@ -110,144 +86,38 @@ ApplyGP <- function(trainingTestStructure,dataOptionsStructure,parameterStructur
 
 	timeStart <- Sys.time()
 
-	#-------------------------------------------------------------------------------------------------------#
-	#-- Apply Gaussian process to subset of un-censored training set to pre-learn starting hyperparameters -#
-	#-------------------------------------------------------------------------------------------------------#
-	if(modelType=='survival'&burnIn){
-		nPreLearn 					<- ifelse(ceiling(trainingTestStructure$nTrainingDied/2)<100,trainingTestStructure$nTrainingDied,ceiling(trainingTestStructure$nTrainingDied/2))
-		trainingDiedSubsetIndices 	<- sample(1:trainingTestStructure$nTrainingDied,nPreLearn)
-		trainingDataDiedSubset 		<- trainingTestStructure$trainingDataDied[trainingDiedSubsetIndices,,drop=FALSE]
-		trainingTargetsDiedSubset 	<- trainingTestStructure$trainingTargetsDied[trainingDiedSubsetIndices,,drop=FALSE]
-		trainingEventsDiedSubset 	<- rep(1,length(trainingDiedSubsetIndices))
-		preLearnStructure 			<- list('trainingData'=trainingDataDiedSubset,'trainingTargets'=trainingTargetsDiedSubset,
-											'trainingEvents'= trainingEventsDiedSubset,'testData'=trainingTestStructure$trainingDataCensored,
-											'testTargets'=trainingTestStructure$trainingTargetsCensored,'nTraining'=nPreLearn,
-											'nTest'=trainingTestStructure$nTrainingCensored,'dimension'=trainingTestStructure$dimension,
-											'applyCorr'=FALSE)
-		postPreLearnStructure 		<- PreLearnHyperparam(parameterStructure,plotSaveOptions,preLearnStructure)
-		logHypBurnIn 				<- postPreLearnStructure$logHypLearned
-	} else {
-		logHypBurnIn 				<- parameterStructure$logHypStart
-	}
 
 	#-------------------------------------------------------------------------------------------------------#
-	#-- Apply Gaussian process to whole training set to predict survival of censored training set members --#
+	#-------------- Use inference method to predict survival of censored training set members --------------#
 	#-------------------------------------------------------------------------------------------------------#
-	logHyp 	<- logHypBurnIn
-	if(modelType=='survival'){
-			trainingTargetsCensoredEachRun 					<- trainingTestStructure$trainingTargetsCensoredStart
-			trainingTargetsCensoredVarEachRun 				<- rep(NA,trainingTestStructure$nTrainingCensored)
-			count 											<- 0
-			targetValueChange 								<- 1
-			logHypTable 									<- rbind(unlist(logHypStart),unlist(logHypBurnIn))
-			objective 										<- 1
-			objectiveTable 									<- 0
-			trainingTestStructure$trainingTargetsLearned 	<- trainingTestStructure$trainingTargets
-			if(noiseCorr=='noiseCorrLearned'){
-				logHypNoiseCorrection 						<- logHypStart$noise
-			} else if(noiseCorr=='noiseCorrVec'){
-				logHypNoiseCorrection 						<- rep(logHypStart$noise,trainingTestStructure$nTrainingCensored)
-			} else {
-				logHypNoiseCorrection 						<- NA
-			}
-	}
-	convergence <- 0
-	if((printPlots|savePlots)&trainingTestStructure$dimension==1){
-		xLine 						<- matrix(seq(from=min(c(trainingTestStructure$trainingData,trainingTestStructure$testData)),to=max(c(trainingTestStructure$trainingData,trainingTestStructure$testData)),length.out=100),ncol=1)
-		modelPlotOutputStructure 	<- list()
-	}
-
-	if(modelType=='survival'){
-		# cat('Fitting Run',i,'...')
-		while((targetValueChange>tolerance & count<maxCount) | count<=5 ){
-			learningDataStructure 							<- list('trainingData'=trainingTestStructure$trainingData,
-																	'trainingTargets'=trainingTestStructure$trainingTargetsLearned,
-																	'testData'=trainingTestStructure$trainingDataCensored,
-																	'nTraining'=trainingTestStructure$nTraining,
-																	'nTest'=trainingTestStructure$nTrainingCensored,
-																	'dimension'=trainingTestStructure$dimension,
-																	'events'=trainingTestStructure$events)
-	  		regressionStructure                 			<- GPRegression(logHyp,parameterStructure,learningDataStructure,logHypNoiseCorrection)
-	  		predictionStructure 							<- GPPredict(regressionStructure,parameterStructure,learningDataStructure,regressionStructure$logHypNoiseCorrection)
-	  		trainingTargetsCensoredPredictions    			<- predictionStructure$funcMeanPred
-	  		trainingTargetsCensoredPredictionsVar 			<- predictionStructure$varData
-
-	  		if((printPlots|savePlots)&trainingTestStructure$dimension==1){
-	  			modelPlotStructure	 						<- list('trainingData'=trainingTestStructure$trainingData,
-																	'trainingTargets'=trainingTestStructure$trainingTargetsLearned,
-																	'testData'=xLine,
-																	'nTraining'=trainingTestStructure$nTraining,
-																	'nTest'=100,'dimension'=trainingTestStructure$dimension,
-																	'events'=trainingTestStructure$events)
-				modelPlotOutputStructure[[count+1]] 		<- GPPredict(regressionStructure,parameterStructure,modelPlotStructure,logHypNoiseCorrection)
-			}
-
-	  		logHyp 											<- regressionStructure$logHypChosen
-	  		logHypTable                           			<- rbind(logHypTable,unlist(logHyp))
-	  		objectiveNew 									<- regressionStructure$objective
-	  		objectiveTable 									<- rbind(objectiveTable,objectiveNew)
-			# Incorperate knowledge of censored values #
-			adjustingMeanVarStructure 						<- sapply(1:trainingTestStructure$nTrainingCensored, function(x) AdjustTrainingSurvivalMeanVariance(trainingTestStructure$trainingTargetsCensoredStart[x],trainingTargetsCensoredPredictions[x],trainingTargetsCensoredPredictionsVar[x]))
-			trainingTargetsCensoredUpdated 					<- as.matrix(unlist(adjustingMeanVarStructure[1,]),nrow=trainingTestStructure$nTrainingCensored,ncol=1)
-			trainingTargetsCensoredUpdatedVar 				<- as.matrix(unlist(adjustingMeanVarStructure[2,]),nrow=trainingTestStructure$nTrainingCensored,ncol=1)
-			# Calculate change in targets for assessing convergence #
-			# targetValueChange 								= sum(abs(learningDataStructure$trainingTargets[learningDataStructure$events==0]-trainingTargetsCensoredUpdated))
-			targetValueChange								<- sum(abs(objective-objectiveNew))
-			objective 										<- objectiveNew
-			count                                 			<- count + 1
-			trainingTargetsCensoredVarEachRun 				<- cbind(trainingTargetsCensoredVarEachRun,trainingTargetsCensoredUpdatedVar)
-			trainingTargetsCensoredEachRun        			<- cbind(trainingTargetsCensoredEachRun,trainingTargetsCensoredUpdated)
-			trainingTargetsCensored               			<- trainingTargetsCensoredUpdated
-			trainingTestStructure$trainingTargetsLearned[trainingTestStructure$events==0] <- trainingTargetsCensored
-			cat('Gaussian process trained',count,'times.',fill=TRUE)
-			if(targetValueChange>=tolerance){
-				cat('Change in log marginal likelihood = ',targetValueChange,' > tolerance = ',tolerance,fill=TRUE)
-			} else {
-				cat('Change in log marginal likelihood = ',targetValueChange,' < tolerance = ',tolerance,fill=TRUE)
-			}
-			if(noiseCorr=='noiseCorrVec'){
-				logHypNoiseCorrection <- log(trainingTargetsCensoredUpdatedVar)
-				logHypNoiseCorrection[is.infinite(logHypNoiseCorrection)] <- -10^10
-			} else if(noiseCorr=='noiseCorrLearned'){
-				logHypNoiseCorrection <- regressionStructure$logHypNoiseCorrection
-			}
+	if(inferenceType=='uniform'){
+		trainingTestStructure$trainingTargetsLearned 	<- trainingTestStructure$trainingTargets
+		for(i in 1:dim(trainingTestStructure$trainingTargets)[1]){
+			if(trainingTestStructure$events[i]==0) trainingTestStructure$trainingTargetsLearned[i,1] <- runif(1,min=trainingTestStructure$trainingTargets[i,1],max=max(trainingTestStructure$trainingTargets))
 		}
-		cat('Complete.',fill=TRUE)
-		if(count<maxCount){
-			convergence <- 0
-		} else if(count==maxCount){
-			cat('Censored training set survival time estimates did not converge. maxCount reached.',fill=TRUE)
-			convergence <- 1
-		}
-		logHypChosen 	<- regressionStructure$logHypChosen
-
-	} else {
-		learningDataStructure 			<- list('trainingData'=trainingTestStructure$trainingData,
-												'trainingTargets'=trainingTestStructure$trainingTargets,
-												'testData'=trainingTestStructure$testData,'nTraining'=trainingTestStructure$nTraining,
-												'nTest'=trainingTestStructure$nTest,'dimension'=trainingTestStructure$dimension)
-		parameterStructure$noiseCorr 	<- FALSE
-	  	regressionStructure 			<- GPRegression(logHyp,parameterStructure,learningDataStructure,NA)
-	  	logHypNoiseCorrection 			<- NA
+	} else if(inferenceType=='median'){
+		trainingTestStructure$trainingTargetsLearned 									<- trainingTestStructure$trainingTargets
+		trainingTestStructure$trainingTargetsLearned[trainingTestStructure$events==0] 	<- median(trainingTestStructure$trainingTargets)
 	}
 
+
 	#-------------------------------------------------------------------------------------------------------#
-	#------- Apply model to whole training set and test data to predict survival of test set members -------#
+	#--------------------------- Train GP to predict survival of test set members --------------------------#
 	#-------------------------------------------------------------------------------------------------------#
-	if(modelType=='survival'){
-		finalDataStructure 	<- list('trainingData'=trainingTestStructure$trainingData,
-									'trainingTargets'=trainingTestStructure$trainingTargetsLearned,
-									'testData'=trainingTestStructure$testData,'nTraining'=trainingTestStructure$nTraining,
-									'nTest'=trainingTestStructure$nTest,'dimension'=trainingTestStructure$dimension,
-									'events'=trainingTestStructure$events)
-		predictionStructure <- GPPredict(regressionStructure,parameterStructure,finalDataStructure,logHypNoiseCorrection)
-	} else {
-		predictionStructure <- GPPredict(regressionStructure,parameterStructure,trainingTestStructure,logHypNoiseCorrection)
-	}
-	logHypChosen 			<- regressionStructure$logHypChosen
-	funcMeanPred 			<- predictionStructure$funcMeanPred
-	varFunction  			<- predictionStructure$varFunction
-	varData      			<- predictionStructure$varData
+	learningDataStructure 			<- list('trainingData'=trainingTestStructure$trainingData,
+											'trainingTargets'=trainingTestStructure$trainingTargetsLearned,
+											'testData'=trainingTestStructure$testData,'nTraining'=trainingTestStructure$nTraining,
+											'nTest'=trainingTestStructure$nTest,'dimension'=trainingTestStructure$dimension)
+	parameterStructure$noiseCorr 	<- FALSE
+	logHyp 							<- logHypStart
+	regressionStructure 			<- GPRegression(logHyp,parameterStructure,learningDataStructure,NA)
+	logHypNoiseCorrection 			<- NA
+	predictionStructure 			<- GPPredict(regressionStructure,parameterStructure,trainingTestStructure,logHypNoiseCorrection)
+
+	logHypChosen 					<- regressionStructure$logHypChosen
+	funcMeanPred 					<- predictionStructure$funcMeanPred
+	varFunction  					<- predictionStructure$varFunction
+	varData      					<- predictionStructure$varData
 
 	if((printPlots|savePlots)&trainingTestStructure$dimension==1){
 		xLine 					<- matrix(seq(from=min(c(trainingTestStructure$trainingData,trainingTestStructure$testData)),to=max(c(trainingTestStructure$trainingData,trainingTestStructure$testData)),length.out=100),ncol=1)
@@ -324,31 +194,12 @@ ApplyGP <- function(trainingTestStructure,dataOptionsStructure,parameterStructur
 			cat('-------------------------------------------------------',fill=TRUE)
 		sink()
 
-
-		if(modelType=='survival'){
-			sink(paste0(fileName,'Convergence.txt'),append=TRUE)
-				if(convergence==0){
-					cat('Convergence achieved.',fill=TRUE)
-					cat('-------------------------------------------------------',fill=TRUE)
-				} else if(convergence==1){
-					cat('Censored training set survival time estimates did not converge.',fill=TRUE)
-					cat('maxCount reached.',fill=TRUE)
-					cat('-------------------------------------------------------',fill=TRUE)
-				}
-			sink()
-		}
-
 		sink(paste0(fileName,'LearnHyperparam.txt'),append=TRUE)
 			cat('Hyperparameter initialisation values:',fill=TRUE)
 			cat('\tlog(noise hyp) =',logHypStart$noise,fill=TRUE)
 			cat('\tlog(function hyp) =',logHypStart$func,fill=TRUE)
 			cat('\tlog(length hyp) =',logHypStart$length,fill=TRUE)
 			cat('\tmean hyp =',if(parameterStructure$meanFuncForm=='Zero') rep(0,trainingTestStructure$dimension+1) else logHypStart$mean,fill=TRUE)
-			cat('Hyperparameter pre-learned values:',fill=TRUE)
-			cat('\tlog(noise hyp) =',logHypBurnIn$noise,fill=TRUE)
-			cat('\tlog(function hyp) =',logHypBurnIn$func,fill=TRUE)
-			cat('\tlog(length hyp) =',logHypBurnIn$length,fill=TRUE)
-			cat('\tmean hyp =',if(parameterStructure$meanFuncForm=='Zero') rep(0,trainingTestStructure$dimension+1) else logHypBurnIn$mean,fill=TRUE)
 			cat('Hyperparameter final values:',fill=TRUE)
 			cat('\tlog(noise hyp) =',regressionStructure$logHypChosen$noise,fill=TRUE)
 			cat('\tlog(function hyp) =',regressionStructure$logHypChosen$func,fill=TRUE)
@@ -381,9 +232,9 @@ ApplyGP <- function(trainingTestStructure,dataOptionsStructure,parameterStructur
 			points(trainingTestStructure$trainingData[trainingTestStructure$events==0],trainingTestStructure$trainingTargets[trainingTestStructure$events==0],pch=8,col='black')
 			if(censoringType!='None') points(trainingTestStructure$trainingData,trainingTestStructure$trainingTargetsPreCensoring,pch=1,col='blue')
 			if(censoringType=='None') points(trainingTestStructure$trainingData,trainingTestStructure$trainingTargets,pch=1,col='blue')
-			if(modelType=='survival') points(trainingTestStructure$trainingData[trainingTestStructure$events==0],trainingTargetsCensoredEachRun[,dim(trainingTargetsCensoredEachRun)[2]],pch=6,col='green')
+			if(modelType=='survival') points(trainingTestStructure$trainingData[trainingTestStructure$events==0],trainingTestStructure$trainingTargetsLearned[trainingTestStructure$events==0],pch=6,col='green')
 			points(testData,funcMeanPred,col='purple',pch=18)
-			if(modelType=='survival') segments(x0=trainingTestStructure$trainingData[trainingTestStructure$events==0],y0=trainingTestStructure$trainingTargets[trainingTestStructure$events==0],x1=trainingTestStructure$trainingData[trainingTestStructure$events==0],y1=trainingTargetsCensoredEachRun[,dim(trainingTargetsCensoredEachRun)[2]],col='black')
+			if(modelType=='survival') segments(x0=trainingTestStructure$trainingData[trainingTestStructure$events==0],y0=trainingTestStructure$trainingTargets[trainingTestStructure$events==0],x1=trainingTestStructure$trainingData[trainingTestStructure$events==0],y1=trainingTestStructure$trainingTargetsLearned[trainingTestStructure$events==0],col='black')
 			if(modelType=='survival'&censoringType!='None'){
 				par(mar=c(0,0,0,0))
 				plot.new()
@@ -437,27 +288,18 @@ ApplyGP <- function(trainingTestStructure,dataOptionsStructure,parameterStructur
 	#-------------------------------------------------------------------------------------------------------#
 	#-------------------------------------------- Return output --------------------------------------------#
 	#-------------------------------------------------------------------------------------------------------#
-	toReturn 										<- predictionStructure
-	toReturn$parameterStructure 					<- parameterStructure
-	toReturn$dataOptionsStructure 					<- dataOptionsStructure
-	toReturn$trainingTestStructure		 			<- trainingTestStructure
-	toReturn$trainingSetPredictions 				<- trainingSetPredictions
-	toReturn$logHypChosen 							<- regressionStructure$logHypChosen
-	toReturn$logHypBurnIn 							<- logHypBurnIn
-	toReturn$c.index 								<- c.index
-	toReturn$rmse 									<- rmse
-	toReturn$timeTaken								<- timeTaken
-	if(printPlots|savePlots) toReturn$plot1 		<- plot1
-	if(printPlots|savePlots) toReturn$plot2 		<- plot2
-	if(printPlots|savePlots) toReturn$plot3 		<- plot3
-	if(modelType=='survival'){
-		toReturn$convergence 						<- convergence
-		toReturn$logHypTable 						<- logHypTable
-		toReturn$trainingTargetsCensoredVarEachRun 	<- trainingTargetsCensoredVarEachRun
-		toReturn$trainingTargetsCensoredEachRun 	<- trainingTargetsCensoredEachRun
-		toReturn$objectiveTable 					<- objectiveTable
-	}
-	if(noiseCorr=='noiseCorrLearned') toReturn$logHypNoiseCorrection <- logHypNoiseCorrection
+	toReturn 														<- predictionStructure
+	toReturn$parameterStructure 									<- parameterStructure
+	toReturn$dataOptionsStructure 									<- dataOptionsStructure
+	toReturn$trainingTestStructure		 							<- trainingTestStructure
+	toReturn$trainingSetPredictions 								<- trainingSetPredictions
+	toReturn$logHypChosen 											<- regressionStructure$logHypChosen
+	toReturn$c.index 												<- c.index
+	toReturn$rmse 													<- rmse
+	toReturn$timeTaken												<- timeTaken
+	if(printPlots|savePlots) toReturn$plot1 						<- plot1
+	if(printPlots|savePlots) toReturn$plot2 						<- plot2
+	if(printPlots|savePlots) toReturn$plot3 						<- plot3
 	if((printPlots|savePlots)&trainingTestStructure$dimension==1){
 		toReturn$modelPlotOutputStructure			<- modelPlotOutputStructure
 		toReturn$meanLine 							<- meanLine

@@ -10,7 +10,7 @@ PreLearnHyperparam <- function(parameterStructure,plotSaveOptions,preLearnStruct
 	source('OptimisationGradientLog.R')
 
 	meanFuncForm 	<- parameterStructure$meanFuncForm
-	maternParam 	<- parameterStructure$maternParam
+	extraParam 	<- parameterStructure$extraParam
 	covFuncForm 	<- parameterStructure$covFuncForm
 	logHypStart 	<- parameterStructure$logHypStart
 	optimType 		<- parameterStructure$optimType
@@ -40,14 +40,18 @@ PreLearnHyperparam <- function(parameterStructure,plotSaveOptions,preLearnStruct
 
 	#----------------------------- Learn hyperparameters -----------------------------#
 	optimOutput 	<- optim(logHypVec,fn=ForOptimisationLog,gr=OptimisationGradientLog,trainingData=trainingData,trainingTargets=trainingTargets,
-							trainingEvents=trainingEvents,meanFuncForm=meanFuncForm,dimension=dimension,maternParam=maternParam,covFuncForm=covFuncForm,
+							trainingEvents=trainingEvents,meanFuncForm=meanFuncForm,dimension=dimension,extraParam=extraParam,covFuncForm=covFuncForm,
 	                        nSamples=nTraining,noiseCorr=FALSE,logHypNoiseCorrection=NA,method=optimType,control=list('maxit'=maxitPreLearn)) #,'trace'=9
 	logHypVec 		<- optimOutput$par
 	logHypNoise 	<- logHypVec[1,,drop=FALSE]
 	logHypFunc 		<- logHypVec[2,,drop=FALSE]
 	if(covFuncForm=='ARD'){
 		logHypLength 		<- logHypVec[3:(2+dimension),,drop=FALSE]
-	} else {logHypLength 	<- logHypVec[3,,drop=FALSE]}
+	} else if(covFuncForm=='InformedARD'){
+		logHypLength 		<- logHypVec[3:(2+length(extraParam)),,drop=FALSE]
+	} else {
+		logHypLength 	<- logHypVec[3,,drop=FALSE]
+	}
 	switch(meanFuncForm,
 	    'Linear' = {logHypMean 	<- logHypVec[(length(logHypVec)-dimension):length(logHypVec),,drop=FALSE]}, 
 	    'Zero'  = {logHypMean 	<- matrix(rep(0,dimension+1),nrow=dimension+1)}

@@ -50,7 +50,7 @@ ApplyRFSurvival <- function(trainingTestStructure,dataOptionsStructure,parameter
 		cat('\tGenerating log hyperparameters were',unlist(dataOptionsStructure$logHypGenerate),fill=TRUE)
 		cat('\tSamples were produced on a grid between',dataOptionsStructure$gridMinimum,'and',dataOptionsStructure$gridMaximum,fill=TRUE)
 		cat('\tCensoring was',dataOptionsStructure$censoringType,'with level sigma =',dataOptionsStructure$censoringLevel,fill=TRUE)
-		if(dataOptionsStructure$covFuncFormGen=='Matern'){cat('\tCovariance function was',dataOptionsStructure$covFuncFormGen,'with Matern parameter set to',dataOptionsStructure$maternParamGen,fill=TRUE)
+		if(dataOptionsStructure$covFuncFormGen=='Matern'){cat('\tCovariance function was',dataOptionsStructure$covFuncFormGen,'with Matern parameter set to',dataOptionsStructure$extraParamGen,fill=TRUE)
 		} else {cat('\tCovariance function was',dataOptionsStructure$covFuncFormGen,fill=TRUE)}
 		cat('\tMean function was',dataOptionsStructure$meanFuncFormGen,fill=TRUE)
 
@@ -86,16 +86,20 @@ ApplyRFSurvival <- function(trainingTestStructure,dataOptionsStructure,parameter
 	#-------------------------------------------------------------------------------------------------------#
 	#---------------------------------------- Random Forest Model ------------------------------------------#
 	#-------------------------------------------------------------------------------------------------------#
-	model.rfSurvival 	= rfsrc(Surv(V1,V1.1)~.,data=trainingAll,na.action='na.impute',importance=TRUE)
-	modelCoefficients 	= model.rfSurvival$importance
-	pred 				= predict(model.rfSurvival,testAll)
-	survivalFunc 		= pred$survival
-	timeFunc 			= pred$time.interest
-	predictions 		= pred$predicted
-	c.index 			= CalculateMetrics(predictions,testAll$V1,testAll$V1.1)$c.index	
+	model.rfSurvival 	<- rfsrc(Surv(V1,V1.1)~.,data=trainingAll,na.action='na.impute',importance=TRUE)
+	modelCoefficients 	<- model.rfSurvival$importance
+	predTrain 			<- predict(model.rfSurvival)
+	trainingPredictions <- predTrain$predicted
+	predTest 			<- predict(model.rfSurvival,testAll)
+	survivalFunc 		<- predTest$survival
+	timeFunc 			<- predTest$time.interest
+	testPredictions 	<- predTest$predicted
+	metricStructure  	<- CalculateMetrics(testPredictions,testAll$V1,testAll$V1.1,trainingPredictions,trainingAll$V1,trainingAll$V1.1)
+	c.index 			<- metricStructure$c.index
+	rmse 				<- metricStructure$rmse
 
-	timeEnd   			= Sys.time()
-	timeTaken 			= difftime(timeEnd,timeStart, units='min')
+	timeEnd   			<- Sys.time()
+	timeTaken 			<- difftime(timeEnd,timeStart, units='min')
 	genesByImportance 	<- colnames(trainingTestStructure$trainingData)[order(model.rfSurvival$importance)]
 	# browser()
 	#-------------------------------------------------------------------------------------------------------#
@@ -110,12 +114,12 @@ ApplyRFSurvival <- function(trainingTestStructure,dataOptionsStructure,parameter
 	}
 
 	if(printPlots){
-		plot(predictions,testAll$V1,col='white',xlim=c(0,max(c(testAll$V1,predictions))),ylim=c(0,max(c(testAll$V1,predictions))),xlab='Predicted Survival, Random Forest for Survival',ylab='Measured Survival',main=paste0('c.index = ',round(c.index,2)))
-		points(predictions[testAll$V1.1==1],testAll$V1[testAll$V1.1==1],col='blue')
-		points(predictions[testAll$V1.1==0],testAll$V1[testAll$V1.1==0],col='green')
+		plot(testPredictions,testAll$V1,col='white',xlim=c(0,max(c(testAll$V1,testPredictions))),ylim=c(0,max(c(testAll$V1,testPredictions))),xlab='Predicted Survival, Random Forest for Survival',ylab='Measured Survival',main=paste0('c.index = ',round(c.index,2)))
+		points(testPredictions[testAll$V1.1==1],testAll$V1[testAll$V1.1==1],col='blue')
+		points(testPredictions[testAll$V1.1==0],testAll$V1[testAll$V1.1==0],col='green')
 		abline(0,1)
 
-		PlotKaplanMeier(predictions,testAll$V1,testAll$V1.1,model)
+		PlotKaplanMeier(testPredictions,testAll$V1,testAll$V1.1,model)
 		plotKM <- recordPlot()
 	} else {
 		plotKM <- NULL
@@ -128,15 +132,16 @@ ApplyRFSurvival <- function(trainingTestStructure,dataOptionsStructure,parameter
 			cat('C Index = ',c.index,fill=TRUE)
 			cat('-------------------------------------------------------',fill=TRUE)
 		sink()
-		write.table(predictions,paste0(fileName,'RFSurvivalTestTargetPredictions.csv'),sep=',',quote=FALSE,row.names=FALSE)
+		write.table(testPredictions,paste0(fileName,'RFSurvivalTestTargetPredictions.csv'),sep=',',quote=FALSE,row.names=FALSE)
 		write.table(testAll$V1,paste0(fileName,'RFSurvivalTestTargets.csv'),sep=',',quote=FALSE,row.names=FALSE)
 	}
 
 	#-------------------------------------------------------------------------------------------------------#
 	#-------------------------------------------- Return output --------------------------------------------#
 	#-------------------------------------------------------------------------------------------------------#
-	toReturn = list('timeTaken'=timeTaken,'predictions'=predictions,'c.index'=c.index,'model'='RFSurvival','modelVariables'=modelCoefficients,
-					'genesByImportance'=genesByImportance,'testTargets'=trainingTestStructure$testTargets,'trainingTestStructure'=trainingTestStructure)
+	toReturn = list('timeTaken'=timeTaken,'trainingPredictions'=trainingPredictions,'testPredictions'=testPredictions,'c.index'=c.index,'rmse'=rmse,
+					'model'='RFSurvival','modelVariables'=modelCoefficients,'genesByImportance'=genesByImportance,'testTargets'=trainingTestStructure$testTargets,
+					'trainingTestStructure'=trainingTestStructure)
 	if(printPlots) toReturn$'plotKM' <- plotKM
 
 	return(toReturn)

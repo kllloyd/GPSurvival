@@ -4,9 +4,9 @@ ApplyCoxYuanEtAl <- function(trainingTestStructure){
     #-------------------------------------------------------------------------------------------------------#
     # Applies Cox PH model as Yuan et al. (2014)                                     
     #-------------------------------------------------------------------------------------------------------#
-	source('coxcvMolClinical.R')
-	source('coxcvMol.R')
-	source('coxcvClinical.R')
+	source('../toSource/coxcvMolClinical.R')
+	source('../toSource/coxcvMol.R')
+	source('../toSource/coxcvClinical.R')
 
 	cancer 			<- trainingTestStructure$cancer
 	molPlatform 	<- trainingTestStructure$molPlatform

@@ -50,7 +50,7 @@ ApplyAFT <- function(trainingTestStructure,dataOptionsStructure,parameterStructu
 		cat('\tGenerating log hyperparameters were',unlist(dataOptionsStructure$logHypGenerate),fill=TRUE)
 		cat('\tSamples were produced on a grid between',dataOptionsStructure$gridMinimum,'and',dataOptionsStructure$gridMaximum,fill=TRUE)
 		cat('\tCensoring was',dataOptionsStructure$censoringType,'with level sigma =',dataOptionsStructure$censoringLevel,fill=TRUE)
-		if(dataOptionsStructure$covFuncFormGen=='Matern'){cat('\tCovariance function was',dataOptionsStructure$covFuncFormGen,'with Matern parameter set to',dataOptionsStructure$maternParamGen,fill=TRUE)
+		if(dataOptionsStructure$covFuncFormGen=='Matern'){cat('\tCovariance function was',dataOptionsStructure$covFuncFormGen,'with Matern parameter set to',dataOptionsStructure$extraParamGen,fill=TRUE)
 		} else {cat('\tCovariance function was',dataOptionsStructure$covFuncFormGen,fill=TRUE)}
 		cat('\tMean function was',dataOptionsStructure$meanFuncFormGen,fill=TRUE)
 
@@ -85,17 +85,15 @@ ApplyAFT <- function(trainingTestStructure,dataOptionsStructure,parameterStructu
 	#-------------------------------------------------------------------------------------------------------#
 	#----------------------------------- Accelerated Failure Time Model ------------------------------------#
 	#-------------------------------------------------------------------------------------------------------#
-	model.aft 			= survreg(as.formula(paste0('Surv(y,event) ~',paste(paste0('x',1:dimension),collapse='+'))),data=trainingAll, dist="weibull")
-	predictions 		= predict(model.aft,testAll,type='response')
-	# c.index 			= CalculateMetrics(predictions,testAll$y,testAll$event)$c.index
-	if(class(try(CalculateMetrics(predictions,testAll$y,testAll$event)$c.index,silent=TRUE)) == "try-error"){
-  		c.index 	<- NA
-  	} else {
-		c.index 	<- CalculateMetrics(predictions,testAll$y,testAll$event)$c.index
-	}
+	model.aft 			<- survreg(as.formula(paste0('Surv(y,event) ~',paste(paste0('x',1:dimension),collapse='+'))),data=trainingAll, dist="weibull")
+	trainingPredictions <- predict(model.aft,type='response')
+	testPredictions 	<- predict(model.aft,testAll,type='response')
+	metricStructure  	<- CalculateMetrics(testPredictions,testAll$y,testAll$event,trainingPredictions,trainingAll$y,trainingAll$event)
+	c.index 			<- metricStructure$c.index
+	rmse 				<- metricStructure$rmse
 
-	timeEnd   			= Sys.time()
-	timeTaken 			= difftime(timeEnd,timeStart, units='min')
+	timeEnd   			<- Sys.time()
+	timeTaken 			<- difftime(timeEnd,timeStart, units='min')
 
 	#-------------------------------------------------------------------------------------------------------#
 	#--------------------------------- Print and save variables and plots ----------------------------------#
@@ -109,14 +107,14 @@ ApplyAFT <- function(trainingTestStructure,dataOptionsStructure,parameterStructu
 	}
 
 	if(printPlots){
-		if(!any(is.infinite(predictions))){
-			plot(testAll$y,predictions,xlim=c(0,max(c(testAll$y,predictions))),ylim=c(0,max(c(testAll$y,predictions))),ylab='Predicted Survival, AFT',xlab='Measured Survival',main=paste0('c.index = ',round(c.index,2)))
+		if(!any(is.infinite(testPredictions))){
+			plot(testAll$y,testPredictions,xlim=c(0,max(c(testAll$y,testPredictions))),ylim=c(0,max(c(testAll$y,testPredictions))),ylab='Predicted Survival, AFT',xlab='Measured Survival',main=paste0('c.index = ',round(c.index,2)))
 			abline(0,1)
 		}
 	}
 
 	if(printPlots|savePlots){
-		PlotKaplanMeier(predictions,testAll$y,testAll$event,model)
+		PlotKaplanMeier(testPredictions,testAll$y,testAll$event,model)
 		plotKM <- recordPlot()
 		# plotKM <- NULL
 	}
@@ -128,14 +126,15 @@ ApplyAFT <- function(trainingTestStructure,dataOptionsStructure,parameterStructu
 			cat('C Index = ',c.index,fill=TRUE)
 			cat('-------------------------------------------------------',fill=TRUE)
 		sink()
-		write.table(predictions,paste0(fileName,'TestTargetPredictions.csv'),sep=',',quote=FALSE,row.names=FALSE,append=TRUE)
+		write.table(testPredictions,paste0(fileName,'TestTargetPredictions.csv'),sep=',',quote=FALSE,row.names=FALSE,append=TRUE)
 		write.table(testAll$y,paste0(fileName,'testTargetsPreCensoring.csv'),sep=',',quote=FALSE,row.names=FALSE,append=TRUE)
 	}
 
 	#-------------------------------------------------------------------------------------------------------#
 	#-------------------------------------------- Return output --------------------------------------------#
 	#-------------------------------------------------------------------------------------------------------#
-	toReturn = list('timeTaken'=timeTaken,'predictions'=predictions,'c.index'=c.index,'model'=model,'trainingTestStructure'=trainingTestStructure)
+	toReturn = list('timeTaken'=timeTaken,'trainingPredictions'=trainingPredictions,'testPredictions'=testPredictions,'c.index'=c.index,'rmse'=rmse,
+					'model'=model,'trainingTestStructure'=trainingTestStructure)
 	if(printPlots) toReturn$'plotKM' <- plotKM
 
 	return(toReturn)

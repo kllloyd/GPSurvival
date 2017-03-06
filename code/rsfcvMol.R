@@ -1,3 +1,4 @@
+# Yuan Yuan 2012-12-13
 ##############################################################################
 # Runs the cox proportional hazards model using nfolds cross validation and
 # returns the predicted risk score
@@ -51,9 +52,11 @@ rsfcvMol <- function(x.train,y.train, x.test, y.test, ntree=1000) {
         rsf.both.train <- predict(rf.all, data.frame(x.train), seed=-1)$predicted
         rsf.both.predict <- predict(rf.all, data.frame(x.test), seed=-1)$predicted
 
-        # library(survcomp)
+        library(survcomp)
         c.index.train <- concordance.index(rsf.both.train, y.train[,1], y.train[,2])$c.index
         c.index.predict <- concordance.index(rsf.both.predict, y.test[,1], y.test[,2])$c.index
+        # c.index.train <- estC(scoreY=rsf.both.train, timeX=y.train[,1], statusX=y.train[,2])
+        # c.index.predict <- estC(scoreY=rsf.both.predict, timeX=y.test[,1], statusX=y.test[,2])
         print(c.index.predict)
 
     toReturn <- list('rsf.predict'=rsf.both.predict,'c.index.predict'=c.index.predict)

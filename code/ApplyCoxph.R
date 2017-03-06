@@ -50,7 +50,7 @@ ApplyCoxph <- function(trainingTestStructure,dataOptionsStructure,parameterStruc
 		cat('\tGenerating log hyperparameters were',unlist(dataOptionsStructure$logHypGenerate),fill=TRUE)
 		cat('\tSamples were produced on a grid between',dataOptionsStructure$gridMinimum,'and',dataOptionsStructure$gridMaximum,fill=TRUE)
 		cat('\tCensoring was',dataOptionsStructure$censoringType,'with level sigma =',dataOptionsStructure$censoringLevel,fill=TRUE)
-		if(dataOptionsStructure$covFuncFormGen=='Matern'){cat('\tCovariance function was',dataOptionsStructure$covFuncFormGen,'with Matern parameter set to',dataOptionsStructure$maternParamGen,fill=TRUE)
+		if(dataOptionsStructure$covFuncFormGen=='Matern'){cat('\tCovariance function was',dataOptionsStructure$covFuncFormGen,'with Matern parameter set to',dataOptionsStructure$extraParamGen,fill=TRUE)
 		} else {cat('\tCovariance function was',dataOptionsStructure$covFuncFormGen,fill=TRUE)}
 		cat('\tMean function was',dataOptionsStructure$meanFuncFormGen,fill=TRUE)
 
@@ -85,21 +85,17 @@ ApplyCoxph <- function(trainingTestStructure,dataOptionsStructure,parameterStruc
 	#-------------------------------------------------------------------------------------------------------#
 	#----------------------------------- Cox Proportional Hazards Model ------------------------------------#
 	#-------------------------------------------------------------------------------------------------------#
-	out <- tryCatch({model.coxph 			= coxph(as.formula(paste0('Surv(y,event) ~',paste(paste0('x',1:dimension),collapse='+'))),data=trainingAll)
-	                 modelCoefficients 		= model.coxph$coefficients
-	                 predictions 		   	= predict(model.coxph, subset(testAll,select=-c(y,event)),type='lp')
-	                 c.index 				= CalculateMetrics(predictions,testAll$y,testAll$event)$c.index 
-	                 modelVariables 		= names(coef(model.coxph))[which(coef(model.coxph)!=0)]},
-	                error=function(cond) {
-	                message('Coxph failed')
-	                message("Here's the original error message:")
-	                message(cond)
-	                modelVariables.coxph[[b]] 	= 'modelFailed'
-	                return(NA)
-	        		})
+	model.coxph 		<- coxph(as.formula(paste0('Surv(y,event) ~',paste(paste0('x',1:dimension),collapse='+'))),data=trainingAll)
+	modelCoefficients 	<- model.coxph$coefficients
+	trainingPredictions <- predict(model.coxph,type='lp')
+	testPredictions 	<- predict(model.coxph,subset(testAll,select=-c(y,event)),type='lp')
+	metricStructure  	<- CalculateMetrics(testPredictions,testAll$y,testAll$event,trainingPredictions,trainingAll$y,trainingAll$event)
+	c.index 			<- metricStructure$c.index
+	rmse 				<- metricStructure$rmse
+	modelVariables 		<- names(coef(model.coxph))[which(coef(model.coxph)!=0)]
 
-	timeEnd   	= Sys.time()
-	timeTaken 	= difftime(timeEnd,timeStart, units='min')
+	timeEnd   			<- Sys.time()
+	timeTaken 			<- difftime(timeEnd,timeStart, units='min')
 
 	#-------------------------------------------------------------------------------------------------------#
 	#--------------------------------- Print and save variables and plots ----------------------------------#
@@ -113,10 +109,10 @@ ApplyCoxph <- function(trainingTestStructure,dataOptionsStructure,parameterStruc
 	}
 
 	if(printPlots){
-		plot(predictions,testAll$y,ylim=c(0,max(testAll$y)),xlab='Predicted Survival, Cox Proportional Hazards',ylab='Measured Survival',main=paste0('c.index = ',round(c.index,2)))
+		plot(testPredictions,testAll$y,ylim=c(0,max(testAll$y)),xlab='Predicted Survival, Cox Proportional Hazards',ylab='Measured Survival',main=paste0('c.index = ',round(c.index,2)))
 		abline(0,1)
 
-		PlotKaplanMeier(predictions,testAll$y,testAll$event,model)
+		PlotKaplanMeier(testPredictions,testAll$y,testAll$event,model)
 		plotKM <- recordPlot()
 		# plotKM <- NULL
 	}
@@ -128,15 +124,15 @@ ApplyCoxph <- function(trainingTestStructure,dataOptionsStructure,parameterStruc
 			cat('C Index = ',c.index,fill=TRUE)
 			cat('-------------------------------------------------------',fill=TRUE)
 		sink()
-		write.table(predictions,paste0(fileName,'CoxphTestTargetPredictions.csv'),sep=',',quote=FALSE,row.names=FALSE)
+		write.table(testPredictions,paste0(fileName,'CoxphTestTargetPredictions.csv'),sep=',',quote=FALSE,row.names=FALSE)
 		write.table(testAll$y,paste0(fileName,'CoxphTestTargets.csv'),sep=',',quote=FALSE,row.names=FALSE)
 	}
 
 	#-------------------------------------------------------------------------------------------------------#
 	#-------------------------------------------- Return output --------------------------------------------#
 	#-------------------------------------------------------------------------------------------------------#
-	toReturn = list('timeTaken'=timeTaken,'predictions'=predictions,'c.index'=c.index,'model'='Coxph','modelVariables'=modelVariables,
-					'trainingTestStructure'=trainingTestStructure)
+	toReturn = list('timeTaken'=timeTaken,'trainingPredictions'=trainingPredictions,'testPredictions'=testPredictions,'c.index'=c.index,'rmse'=rmse,
+					'model'='Coxph','modelVariables'=modelVariables,'trainingTestStructure'=trainingTestStructure)
 	if(printPlots) toReturn$'plotKM' <- plotKM
 	return(toReturn)
 }

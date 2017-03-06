@@ -14,7 +14,7 @@ MakeSyntheticData <- function(dataOptionsStructure){
 	logHypGenerate 		<- dataOptionsStructure$logHypGenerate
 	covFuncFormGen 		<- dataOptionsStructure$covFuncFormGen
 	meanFuncFormGen 	<- dataOptionsStructure$meanFuncFormGen
-	maternParamGen 		<- dataOptionsStructure$maternParamGen
+	extraParamGen 		<- dataOptionsStructure$extraParamGen
 	dimension 			<- dataOptionsStructure$dimension
 	nSamples 			<- dataOptionsStructure$nSamples
 	nTraining 			<- dataOptionsStructure$nTraining
@@ -26,8 +26,8 @@ MakeSyntheticData <- function(dataOptionsStructure){
 	extraDimensions 	<- dataOptionsStructure$extraDimensions
 
 	if(useARD){
-		dimension 	<- dimension-extraDimensions
-		extraXData 	<- matrix(runif(nSamples*extraDimensions,min=gridMinimum,max=gridMaximum),nrow=nSamples)
+		dimension 				<- dimension-extraDimensions
+		logHypGenerate$length 	<- logHypGenerate$length[1:dimension]
 	}
 
 	#----------------------- Select x data -----------------------#
@@ -38,7 +38,7 @@ MakeSyntheticData <- function(dataOptionsStructure){
 	'likeRealData' 	= {	nSamplesRounded <- nSamples
 						xAll 			<- matrix(0,nSamplesRounded,nSamplesRounded)
 						xAll 			<- sapply(1:dimension,function(x) rnorm(nSamplesRounded,mean=0,sd=1))
-						K  				<- CovFunc(t(xAll),t(xAll),maternParamGen,exp(logHypGenerate$func),exp(logHypGenerate$length),covFuncFormGen)
+						K  				<- CovFunc(xAll,xAll,xAll,NA,extraParamGen,exp(logHypGenerate$func),exp(logHypGenerate$length),covFuncFormGen)
 				 		if(!all( eigen(K)$values >10^-13 )){
 				   			cat('K is not positive-definite. Nearby p.d. matrix will be found.',fill=TRUE)
 				   			nearPDStructure <- nearPD(K)
@@ -56,7 +56,7 @@ MakeSyntheticData <- function(dataOptionsStructure){
 	'method1' 		= {	nSamplesRounded 		<- ceiling(nSamples^(1/dimension))^dimension
 						pointsInOneDimension 	<- seq(from=gridMinimum,to=gridMaximum,length.out=ceiling(nSamplesRounded^(1/dimension)))
 						xAll 					<- as.matrix(expand.grid(rep(list(pointsInOneDimension), dimension)))
-						K  						<- CovFunc(t(xAll),t(xAll),maternParamGen,exp(logHypGenerate$func),exp(logHypGenerate$length),covFuncFormGen)
+						K  						<- CovFunc(xAll,xAll,xAll,NA,extraParamGen,exp(logHypGenerate$func),exp(logHypGenerate$length),covFuncFormGen)
 						if(!all( eigen(K)$values >0 )){
 						  cat('K is not positive-definite. Nearby p.d. matrix will be found.',fill=TRUE)
 						  nearPDStructure <- nearPD(K)
@@ -74,7 +74,7 @@ MakeSyntheticData <- function(dataOptionsStructure){
 						K 				<- matrix(0,nSamplesRounded,nSamplesRounded)
 						while(inherits(try(chol(K), silent=TRUE), "try-error")){
 							xAll 	<- matrix(rnorm(nSamplesRounded*dimension),nrow=nSamplesRounded)
-							K 		<- CovFunc(t(xAll),t(xAll),maternParamGen,exp(logHypGenerate$func),exp(logHypGenerate$length),covFuncFormGen)
+							K 		<- CovFunc(xAll,xAll,xAll,NA,extraParamGen,exp(logHypGenerate$func),exp(logHypGenerate$length),covFuncFormGen)
 						}},
 
 	# METHOD 3
@@ -84,12 +84,12 @@ MakeSyntheticData <- function(dataOptionsStructure){
 						K = matrix(0,nStart,nStart)
 						while(inherits(try(chol(K), silent=TRUE), "try-error")){
 							xAll 	<- matrix(rnorm(nStart*dimension),nrow=nStart)
-							K 		<- CovFunc(t(xAll),t(xAll),maternParamGen,exp(logHypGenerate$func),exp(logHypGenerate$length),covFuncFormGen)
+							K 		<- CovFunc(xAll,xAll,xAll,NA,extraParamGen,exp(logHypGenerate$func),exp(logHypGenerate$length),covFuncFormGen)
 						}
 						nIn = nStart
 						while(nIn<nSamplesRounded){
 							xAllTest 	<- rbind(xAll,as.matrix(rnorm(1*dimension),nrow=1))
-							K 			<- CovFunc(t(xAllTest),t(xAllTest),maternParamGen,exp(logHypGenerate$func),exp(logHypGenerate$length),covFuncFormGen)
+							K 			<- CovFunc(xAllTest,xAllTest,xAllTest,NA,extraParamGen,exp(logHypGenerate$func),exp(logHypGenerate$length),covFuncFormGen)
 							if(!inherits(try(chol(K), silent=TRUE), "try-error")){
 								xAll 	<- rbind(xAll,as.matrix(rnorm(1*dimension),nrow=1))
 								nIn 	<- nIn +1
@@ -104,14 +104,14 @@ MakeSyntheticData <- function(dataOptionsStructure){
 						K <- matrix(0,nSamplesRounded,nSamplesRounded)
 						while(inherits(try(chol(K), silent=TRUE), "try-error")){
 							xAll 	<- as.matrix(expand.grid(rep(list(pointsInOneDimension), dimension)))+as.matrix(rnorm(nSamplesRounded*dimension),nrow=nSamplesRounded)
-							K  		<- CovFunc(t(xAll),t(xAll),maternParamGen,exp(logHypGenerate$func),exp(logHypGenerate$length),covFuncFormGen)
+							K  		<- CovFunc(xAll,xAll,xAll,NA,extraParamGen,exp(logHypGenerate$func),exp(logHypGenerate$length),covFuncFormGen)
 						}},
 
 	# METHOD 5
 	# Samples randomly generated, nearPD used to produce covariance matrix
 	'method5' 		= {	nSamplesRounded <- ceiling(nSamples^(1/dimension))^dimension
 						xAll 			<- matrix(rnorm(nSamplesRounded*dimension),nrow=nSamplesRounded)
-						K  				<- CovFunc(t(xAll),t(xAll),maternParamGen,exp(logHypGenerate$func),exp(logHypGenerate$length),covFuncFormGen)
+						K  				<- CovFunc(xAll,xAll,xAll,NA,extraParamGen,exp(logHypGenerate$func),exp(logHypGenerate$length),covFuncFormGen)
 						if(!all( eigen(K)$values >0 )){
 						  cat('K is not positive-definite. Nearby p.d. matrix will be found.',fill=TRUE)
 						  nearPDStructure <- nearPD(K)
@@ -127,7 +127,7 @@ MakeSyntheticData <- function(dataOptionsStructure){
 	# Samples randomly generated from uniform distribution, nearPD used to produce covariance matrix
 	'method6' 		= {	nSamplesRounded <- ceiling(nSamples^(1/dimension))^dimension
 						xAll 			<- matrix(runif(nSamplesRounded*dimension,min=gridMinimum,max=gridMaximum),nrow=nSamplesRounded)
-						K  				<- CovFunc(t(xAll),t(xAll),maternParamGen,exp(logHypGenerate$func),exp(logHypGenerate$length),covFuncFormGen)
+						K  				<- CovFunc(xAll,xAll,xAll,NA,extraParamGen,exp(logHypGenerate$func),exp(logHypGenerate$length),covFuncFormGen)
 						if(!all( eigen(K)$values >10^-13 )){
 						  cat('K is not positive-definite. Nearby p.d. matrix will be found.',fill=TRUE)
 						  nearPDStructure <- nearPD(K)
@@ -152,7 +152,13 @@ MakeSyntheticData <- function(dataOptionsStructure){
 	indices <- sample(1:(dim(yAll)[1]),nSamplesRounded)
 	y  		<- yAll[indices,,drop=FALSE]
 	x  		<- xAll[indices,,drop=FALSE]
-	if(useARD) x <- cbind(x,extraXData)
+
+	#-------------------- Add extra dimensions -------------------#
+
+	if(useARD){
+		extraXData 	<- matrix(runif(nSamples*extraDimensions,min=min(x),max=max(x)),nrow=nSamples)
+		x 			<- cbind(x,extraXData)
+	}
 
 	toOutput <- list('data'=x,'targets'=y,'methodFlag'=methodFlag)
 	return(toOutput)

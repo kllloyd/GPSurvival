@@ -30,6 +30,8 @@ GenerateData <- function(dataOptionsStructure,outerFolder,nReps){
 				censoredStructure[[i]] 			<- CensorData(dataStructure[[i]],dataOptionsStructure)
 				allY[[i]] 						<- censoredStructure[[i]]$targets
 				allEvents[[i]] 					<- censoredStructure[[i]]$events
+			} else {
+				allEvents[[i]] 					<- rep(NA,dataOptionsStructure$nSamples)
 			}
 		}
 	} else if(dataSource=='CuratedOvarian'){
@@ -39,7 +41,7 @@ GenerateData <- function(dataOptionsStructure,outerFolder,nReps){
 		chosenClinicalFeatures 		<- dataOptionsStructure$chosenClinicalFeatures
 		chosenExtraClinicalFeatures <- dataOptionsStructure$chosenExtraClinicalFeatures
 		chosenExpressionFeatures 	<- dataOptionsStructure$chosenExpressionFeatures
-		extractionOutput 			<- DataExtractionCuratedOvarian(dataSet,chosenClinicalFeatures,chosenExtraClinicalFeatures,chosenExpressionFeatures,geneExpressionFlag,clinicalFeaturesFlag)
+		extractionOutput 			<- DataExtraction(dataSet,chosenClinicalFeatures,chosenExtraClinicalFeatures,chosenExpressionFeatures,geneExpressionFlag,clinicalFeaturesFlag)
 		allData 					<- extractionOutput$inputData
 		allData 					<- allData[complete.cases(allData),,drop=FALSE]
 		if(length(which(allData$days_to_event==0))!=0) allData <- allData[-which(allData$days_to_event==0),,drop=FALSE]
@@ -142,8 +144,7 @@ GenerateData <- function(dataOptionsStructure,outerFolder,nReps){
 			}
 			trainingTestStructureNReps[[i]] 	<- list('trainingData'=trainingData,'trainingTargets'=trainingTargets,'testData'=testData,'testTargets'=testTargets,
 														'events'=trainingEvents,'testEvents'=testEvents,'nTraining'=nTraining,'nTest'=nTest,'dimension'=dimension,
-														'total'=dataOptionsStructure$nSamples,'methodFlag'=dataStructure[[1]]$methodFlag,
-														'trainingTargetsPreCensoring'=trainingTargetsPreCensoring,'testTargetsPreCensoring'=testTargetsPreCensoring)
+														'total'=dataOptionsStructure$nSamples,'methodFlag'=dataStructure[[1]]$methodFlag)
 			if(censoringType!='None'){
 				trainingTestStructureNReps[[i]]$trainingTargetsPreCensoring 	<- trainingTargetsPreCensoring
 				trainingTestStructureNReps[[i]]$testTargetsPreCensoring 		<- testTargetsPreCensoring

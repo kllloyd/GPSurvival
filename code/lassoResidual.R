@@ -1,3 +1,5 @@
+# Yuan Yuan 2012-12-13
+
 ### get columns to include based on LASSO without cross validation.
 ### ** requires the glmnet package
 

@@ -1,4 +1,4 @@
-RunAllModelsAllCombinations <- function(cancer,molPlatform,clinicalFlag,nReps){
+RunAllModelsAllCombinations <- function(cancer,molPlatform,clinicalFlag,nReps,k){
 	#--------------------------------------------------------------------------------------------------------------------------------------------#
 	# K Lloyd 2016_09_16
 	# Recreating analysis of TCGA data by Yuan et al., 2014
@@ -7,7 +7,8 @@ RunAllModelsAllCombinations <- function(cancer,molPlatform,clinicalFlag,nReps){
 	# RunAllModelsAllCombinations applies each of 6 models to the provided data sets.
 	#--------------------------------------------------------------------------------------------------------------------------------------------#
 
-	allParameterStructures              <- SetParametersRealYuan(cancer=cancer,molPlatform=molPlatform,clinicalFlag=clinicalFlag,nReps=nReps)
+	unid 								<- paste0(format(Sys.time(),format='y%Ym%md%dh%Hm%Ms%S'),'k',k)
+	allParameterStructures              <- SetParametersRealYuan(cancer=cancer,molPlatform=molPlatform,clinicalFlag=clinicalFlag,nReps=nReps,unid=unid)
 	parameterStructure                  <- allParameterStructures$parameterStructure
 	plotSaveOptions                     <- allParameterStructures$plotSaveOptions
 	dataOptionsStructure                <- allParameterStructures$dataOptionsStructure
@@ -18,17 +19,23 @@ RunAllModelsAllCombinations <- function(cancer,molPlatform,clinicalFlag,nReps){
 
 	parameterStructure$tolerance 		<- 0.00001*trainingTestStructureNReps[[1]]$nTraining*dataOptionsStructure$censoredProportion
 
+	if(saveFiles){
+		sink(paste0(getwd(),'/',outerFolder,'/',unid,'/',unid,'RunOptions.txt'),append=TRUE)
+			PrintOptions2(dataOptionsStructure,parameterStructure)
+		sink()
+	}
+
 	outputStructureCox  <- list()
 	outputStructureRSF  <- list()
-	outputStructureGPS1 <- list()
 	outputStructureGP 	<- list()
+	outputStructureGPS1 <- list()
 	outputStructureGPS2 <- list()
 	outputStructureGPS3 <- list()
-	outputStructureGPS4 <- list()
 
-	#####################################
-	## Cox Proportional Hazards Model
-	#####################################
+
+	###########################################
+	## Cox Proportional Hazards Model (Coxph)
+	###########################################
 	sink(file=paste0('Runs/',parameterStructure$unid,'/','output_',dataOptionsStructure$cancer,'_',dataOptionsStructure$molPlatform,'_',dataOptionsStructure$clinicalFlag,'_Cox','.txt'))
 	for (seed in 1:dataOptionsStructure$nReps){
 	    cat("seed =", seed,fill=TRUE)
@@ -38,9 +45,9 @@ RunAllModelsAllCombinations <- function(cancer,molPlatform,clinicalFlag,nReps){
 	}
 	sink()
 
-	#####################################
-	## Random Survival Forest Model
-	#####################################
+	###########################################
+	## Random Survival Forest Model (RSF)
+	###########################################
 	sink(file=paste0('Runs/',parameterStructure$unid,'/','output_',dataOptionsStructure$cancer,'_',dataOptionsStructure$molPlatform,'_',dataOptionsStructure$clinicalFlag,'_RSF','.txt'))
 	for(seed in 1:dataOptionsStructure$nReps){
 	    cat("seed =", seed,fill=TRUE)
@@ -50,9 +57,9 @@ RunAllModelsAllCombinations <- function(cancer,molPlatform,clinicalFlag,nReps){
 	}
 	sink()
 
-	#####################################
-	## GP Without Censored Samples
-	#####################################
+	###########################################
+	## GP Without Censored Samples (GP)
+	###########################################
 	dataOptionsStructure$censoringType 		<- 'None'
 	parameterStructure$noiseCorr 			<- FALSE
 	parameterStructure$modelType 			<- 'non-survival'
@@ -64,9 +71,9 @@ RunAllModelsAllCombinations <- function(cancer,molPlatform,clinicalFlag,nReps){
 	    outputStructureGP[[seed]]  			<- ApplyGP(trainingTestStructure,dataOptionsStructure,parameterStructure,plotSaveOptions)
 	}
 
-	#####################################
-	## GP for Survival No Correction
-	#####################################
+	###########################################
+	## GP for Survival No Correction (GPS1)
+	###########################################
 	dataOptionsStructure$censoringType 		<- 'NormalLoopSample'
 	parameterStructure$noiseCorr 			<- FALSE
 	parameterStructure$modelType 			<- 'survival'
@@ -77,9 +84,9 @@ RunAllModelsAllCombinations <- function(cancer,molPlatform,clinicalFlag,nReps){
 	    outputStructureGPS1[[seed]]  		<- ApplyGP(trainingTestStructure,dataOptionsStructure,parameterStructure,plotSaveOptions)
 	}
 
-	#####################################
-	## GP for Survival V Correction
-	#####################################
+	###########################################
+	## GP for Survival V Correction (GPS2)
+	###########################################
 	dataOptionsStructure$censoringType 		<- 'NormalLoopSample'
 	parameterStructure$noiseCorr 			<- 'noiseCorrVec'
 	parameterStructure$modelType 			<- 'survival'
@@ -90,9 +97,9 @@ RunAllModelsAllCombinations <- function(cancer,molPlatform,clinicalFlag,nReps){
 	    outputStructureGPS2[[seed]]  		<- ApplyGP(trainingTestStructure,dataOptionsStructure,parameterStructure,plotSaveOptions)
 	}
 
-	#####################################
-	## GP for Survival L Correction
-	#####################################
+	###########################################
+	## GP for Survival L Correction (GPS3)
+	###########################################
 	dataOptionsStructure$censoringType 		<- 'NormalLoopSample'
 	parameterStructure$noiseCorr 			<- 'noiseCorrLearned'
 	parameterStructure$modelType 			<- 'survival'

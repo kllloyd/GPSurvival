@@ -1,4 +1,4 @@
-SetParametersExp3 <- function(nTraining,nTest,hypGenerateNoise,censoredProportion,nReps){
+SetParametersExp3 <- function(nTraining,nTest,hypGenerateNoise,censoredProportion,nReps,unid){
 	#---------------------------------------------------------------------------------------#
 	# K Lloyd 2016_09_16
 	#---------------------------------------------------------------------------------------#
@@ -39,7 +39,7 @@ SetParametersExp3 <- function(nTraining,nTest,hypGenerateNoise,censoredProportio
 	logHypGenerate 			<- list('noise'=log(hypGenerateNoise),'func'=log(0.5),'length'=log(1.1),'mean'=c(rep(0,dimension),0))
 	
 	covFuncFormGen 			<- 'SqExp'
-	maternParamGen 			<- 3
+	extraParamGen 			<- 3
 	meanFuncFormGen 		<- 'Linear'
 	gridMinimum 			<- 0
 	gridMaximum 			<- 8
@@ -59,7 +59,7 @@ SetParametersExp3 <- function(nTraining,nTest,hypGenerateNoise,censoredProportio
 	}
 
 	dataOptionsStructure 	<- list('dataSource'=dataSource,'logHypGenerate'=logHypGenerate,'covFuncFormGen'=covFuncFormGen,'meanFuncFormGen'=meanFuncFormGen,
-									'maternParamGen'=maternParamGen,'dimension'=dimension,'nTraining'=nTraining,'nTest'=nTest,'gridMinimum'=gridMinimum,
+									'extraParamGen'=extraParamGen,'dimension'=dimension,'nTraining'=nTraining,'nTest'=nTest,'gridMinimum'=gridMinimum,
 									'gridMaximum'=gridMaximum,'censoringSD'=censoringSD,'censoringMean'=censoringMean,'censoringType'=censoringType,'nCensored'=nCensored,
 									'useARD'=useARD,'extraDimensions'=extraDimensions,'folderName'=folderName,'proportionTest'=proportionTest,
 									'censoredProportion'=censoredProportion)
@@ -82,7 +82,7 @@ SetParametersExp3 <- function(nTraining,nTest,hypGenerateNoise,censoredProportio
 	covFuncForm 			<- 'SqExp'				# 'SqExp' or 'ARD'
 	meanFuncForm 			<- 'Zero'
 	burnIn 					<- FALSE
-	maternParam 			<- 3
+	extraParam 				<- 3
 	tolerance 				<- 0.00001*nTraining*censoredProportion
 	hypChangeTol 			<- 10^-10
 	maxCount 				<- 500
@@ -103,7 +103,7 @@ SetParametersExp3 <- function(nTraining,nTest,hypGenerateNoise,censoredProportio
 			logHypStart <- list('noise'=forHyp[1],'func'=forHyp[2],'length'=forHyp[3],'mean'=exp(forHyp[(dim(forHyp)[2]-dimension):dim(forHyp)[2]]))
 		}
 	} 
-	parameterStructure 		<- list('meanFuncForm'=meanFuncForm,'covFuncForm'=covFuncForm,'maternParam'=maternParam,'maxit'=maxit,'maxitPreLearn'=maxitPreLearn,
+	parameterStructure 		<- list('meanFuncForm'=meanFuncForm,'covFuncForm'=covFuncForm,'extraParam'=extraParam,'maxit'=maxit,'maxitPreLearn'=maxitPreLearn,
 									'maxitSurvival'=maxitSurvival,'optimType'=optimType,'logHypStart'=logHypStart,'modelType'=modelType,'unid'=unid,'tolerance'=tolerance,
 									'maxCount'=maxCount,'hypChangeTol'=hypChangeTol,'burnIn'=burnIn,'maxitLaplace'=maxitLaplace,'noiseCorr'=noiseCorr,
 									'imposePriors'=imposePriors)

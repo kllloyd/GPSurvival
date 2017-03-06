@@ -1,3 +1,4 @@
+# Yuan Yuan 2012-12-13
 ##############################################################################
 # Runs the cox proportional hazards model using nfolds cross validation and
 # returns the predicted 

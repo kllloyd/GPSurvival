@@ -2,11 +2,11 @@ RenameGeneFeaturesAccordingToDataSetCuratedOvarian <- function(dataSetExpression
 	#--------------------------------------------------------------------------------------------------------------#
     # K Lloyd 2016_09_16
     #--------------------------------------------------------------------------------------------------------------#
-    # List of gene synonyms "protein-coding_gene 2.txt" downloaded from http://www.genenames.org/cgi-bin/statistics
+    # List of gene synonyms "protein-coding_gene.txt" downloaded from http://www.genenames.org/cgi-bin/statistics
     #--------------------------------------------------------------------------------------------------------------#
 
 	## Set up list of gene synonyms from HGNC database ##
-	hgncDatabase 		<- read.delim("protein-coding_gene 2.txt",stringsAsFactors=FALSE)
+	hgncDatabase 		<- read.delim("protein-coding_gene.txt",stringsAsFactors=FALSE)
 	geneListHGNC 		<- vector("list", dim(hgncDatabase)[1])
 	names(geneListHGNC) <- gsub("[[:punct:]]", "", hgncDatabase$Approved.Symbol)
 	for (i in 1:length(geneListHGNC)){
@@ -43,7 +43,11 @@ RenameGeneFeaturesAccordingToDataSetCuratedOvarian <- function(dataSetExpression
 		## Find genes in list of alternative names in geneListDataSet ##
 		geneListFound <- character()
 		for(i in 1:length(geneListAltNames)){
-			geneListCompare <- sapply(1:length(geneListDataSource),function(y) ifelse(any(geneListAltNames[[i]][[1]]%in%geneListDataSource[[y]][[1]]),paste0(geneListDataSource[y],collapse='///'),NA))
+			if(is.list(geneListAltNames[[i]])){
+				geneListCompare <- sapply(1:length(geneListDataSource),function(y) ifelse(any(geneListAltNames[[i]][[1]]%in%geneListDataSource[[y]][[1]]),paste0(geneListDataSource[y],collapse='///'),NA))
+			} else {
+				geneListCompare <- rep(NA,length(geneListDataSource))
+			}
 			geneListFound[i] <- ifelse(any(!is.na(geneListCompare)),geneListCompare[!is.na(geneListCompare)],NA)
 			names(geneListFound)[i] <- geneListMissing[i]
 		}
@@ -58,20 +62,3 @@ RenameGeneFeaturesAccordingToDataSetCuratedOvarian <- function(dataSetExpression
 	toReturn <- list('geneListRenamed'=geneListRenamed,'geneListPresentInDataSet'=geneListPresentInDataSet,'nGenesInDataSet'=nGenesInDataSet)
 return(toReturn)
 }
-
-# geneListMatched <- sapply(1:length(geneListChosenFeatures),function(y) sapply(1:length(geneListDataSource),function(x) c(ifelse(any(geneListChosenFeatures[y]%in%geneListDataSource[[x]][[1]]),geneListChosenFeatures[y],NA),ifelse(any(geneListChosenFeatures[y]%in%geneListDataSource[[x]][[1]]),paste0(geneListDataSource[[x]][[1]],collapse='///'),NA))))
-
-# unique(c(geneListMatched))[!is.na(unique(c(geneListMatched)))]
-
-
-
-# geneListDataSourceHGNC <- sapply(geneListDataSource,function(gene) ifelse(any(gene%in%geneListHGNC),,NA))
-
-# renamed <- matrix('',length(geneListDataSource),length(geneListHGNC))
-# for(i in 1:length(geneListDataSource)){
-# 	for(j in 1:length(geneListHGNC)){
-# 		renamed[i,j] <- ifelse(any(geneListDataSource[[i]][[1]]%in%geneListHGNC[[j]]),names(geneListHGNC)[j],NA)
-# 	}
-# }
-
-# sapply(1:length(geneListDataSource),function(x) sapply(1:length(geneListHGNC),function(y) ifelse(any(geneListDataSource[[x]][[1]]%in%geneListHGNC[[y]]),names(geneListHGNC)[y],NA)))
