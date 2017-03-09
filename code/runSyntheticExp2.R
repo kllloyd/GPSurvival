@@ -299,7 +299,7 @@ for(i in 1:nReps){
 dataOptionsStructure$censoringType 		<- censoringType
 parameterStructure$noiseCorr 			<- 'none'
 parameterStructure$modelType 			<- 'survival'
-parameterStructure$inferenceType 		<- 'median'
+parameterStructure$inferenceType 		<- 'uniform'
 for(i in 1:nReps){
 	trainingTestStructure 				<- trainingTestStructureForNReps[[i]]
 	outputStructureGPSurvInfUnif[[i]] 	<- ApplyGPDiffInf(trainingTestStructure,dataOptionsStructure,parameterStructure,plotSaveOptions)

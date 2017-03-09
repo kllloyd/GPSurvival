@@ -97,7 +97,7 @@ ApplyGPDiffInf <- function(trainingTestStructure,dataOptionsStructure,parameterS
 		}
 	} else if(inferenceType=='median'){
 		trainingTestStructure$trainingTargetsLearned 									<- trainingTestStructure$trainingTargets
-		trainingTestStructure$trainingTargetsLearned[trainingTestStructure$events==0] 	<- median(trainingTestStructure$trainingTargets)
+		trainingTestStructure$trainingTargetsLearned[trainingTestStructure$events==0] 	<- median(trainingTestStructure$trainingTargetsDied)
 	}
 
 
