@@ -89,7 +89,7 @@ censoredProportionToRun 		<- c(0.01,0.10,0.30,0.50,0.70,0.90,0.98)
 unids 							<- rep(NA,length(censoredProportionToRun))
 
 for(k in 1:length(censoredProportionToRun)){
-	unid 									<- format(Sys.time(),format='y%Ym%md%dh%Hm%Ms%S')
+	unid 									<- paste0(format(Sys.time(),format='y%Ym%md%dh%Hm%Ms%S'),'k',k)
 
 	## Generate parameters ##
 	allParameterStructures 					<- SetParametersExp3(nTraining=500,nTest=100,hypGenerateNoise=0.20,censoredProportion=censoredProportionToRun[k],nReps=nReps,unid=unid)

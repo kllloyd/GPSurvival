@@ -5,7 +5,7 @@ SetParametersExp3 <- function(nTraining,nTest,hypGenerateNoise,censoredProportio
 	# Setting parameters for runSyntheticExp3.R
 	#---------------------------------------------------------------------------------------#
 
-	unid 					<- format(Sys.time(),format='y%Ym%md%dh%Hm%Ms%S')
+	# unid 					<- format(Sys.time(),format='y%Ym%md%dh%Hm%Ms%S')
 	outerFolder 			<- 'Runs'
 	folderName 				<- paste0(outerFolder,'/',unid)
 	
