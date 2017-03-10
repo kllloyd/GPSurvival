@@ -70,13 +70,13 @@ source('SetParametersRealYuan.R')
 cancer 				<- 'KIRC'
 nReps 				<- 100
 
-cancersMolecular 	<- list('KIRC'	=c('None','SCNA','methyl','mRNA','miRNA','protein','SCNA','methyl','mRNA','miRNA','protein'),
-							'OV'	=c('None','SCNA','methyl','mRNA','miRNA','protein','SCNA','methyl','mRNA','miRNA','protein'),
-							'GBM'	=c('None','SCNA','methyl','mRNA','miRNA','SCNA','methyl','mRNA','miRNA'),
+cancersMolecular 	<- list('KIRC'	=c('None','SCNA','mRNA','miRNA','protein','SCNA','mRNA','miRNA','protein'),
+							'OV'	=c('None','SCNA','mRNA','miRNA','protein','SCNA','mRNA','miRNA','protein'),
+							'GBM'	=c('None','SCNA','mRNA','miRNA','SCNA','mRNA','miRNA'),
 							'LUSC'	=c('None','SCNA','mRNA','miRNA','protein','SCNA','mRNA','miRNA','protein'))
-cancersClinical 	<- list('KIRC'	=c(TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE,TRUE),
-							'OV'	=c(TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE,TRUE),
-							'GBM'	=c(TRUE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE),
+cancersClinical 	<- list('KIRC'	=c(TRUE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE),
+							'OV'	=c(TRUE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE),
+							'GBM'	=c(TRUE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE),
 							'LUSC'	=c(TRUE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE))
 k 					<- switch(cancer,
 							'KIRC' 	= 1,
